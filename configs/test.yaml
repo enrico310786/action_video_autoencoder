@@ -1,0 +1,32 @@
+dataset:
+  dataset_path: dataset/augmented_folds_128_v4/fold_0
+  path_dataset_train_csv: dataset/augmented_folds_128_v4/fold_0/df_train.csv
+  path_dataset_val_csv: dataset/augmented_folds_128_v4/fold_0/df_test.csv
+  #path_dataset_test_csv: test_dataset_trasmissioni_augmented.csv
+  batch_size: 16
+model:
+  name_time_model: timesformer # timesformer - r2plus1d_18 - r3d
+  init_dim: 768 # 768 for timesformer - 512 for r2plus1d_18 - 2048 for r3d
+  num_autoencoder_layers: 3 # 2 or 3
+  dim_autoencoder_layers: 512,256,128 #512,256,128
+  freeze_layers: 0
+  saving_dir_experiments: exp_classificazione_eritrociti/efficientnet_v2_m/
+  saving_dir_model: fold_0_run4_v5
+  num_epoch: 60
+  learning_rate: 0.001
+  scheduler_type: StepLR
+  scheduler_step_size: 20
+  lr_factor: 0.1
+  dropout: 0.3
+  do_train: 1
+  do_test: 1
+  criterion_type: CE
+  train_reference_metric: ACCURACY
+data:
+  num_frames_to_sample: 8
+  mean: [0.45, 0.45, 0.45]
+  std: [0.225, 0.225, 0.225]
+  min_size: 256
+  max_size: 320
+  resize_to: 224
+  permute_color_frame: 1

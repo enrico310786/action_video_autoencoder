@@ -54,3 +54,6 @@ __pycache__/*
 
 # Virtual environments
 venv/*
+
+#resources
+resources/*
