@@ -535,7 +535,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
     # create the model
     print("*****************************************")
     print("create the model")
-    model = TimeAutoencoder(cfg["model"])
+    model = TimeAutoencoder(cfg["model"]).to(device)
     print("Check layers properties")
     for i, properties in enumerate(model.named_parameters()):
         print("Model layer: {} -  name: {} - requires_grad: {} ".format(i, properties[0],
