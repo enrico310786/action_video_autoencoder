@@ -13,6 +13,7 @@ import pandas as pd
 import cv2
 import albumentations as A
 import skvideo.io
+import time
 
 remapping_actions_dict = {"Golf-Swing-Back": "Golf-Swing",
                           "Golf-Swing-Front": "Golf-Swing",
@@ -22,8 +23,8 @@ remapping_actions_dict = {"Golf-Swing-Back": "Golf-Swing",
 
 PERC_TRAIN = 0.5
 PERC_TEST = 0.4
-NUMBER_VIDEO_TRAIN = 100
-NUMBER_VIDEO_VAL = 5
+NUMBER_VIDEO_TRAIN = 200
+NUMBER_VIDEO_VAL = 10
 
 
 transform = A.ReplayCompose([
@@ -181,6 +182,8 @@ def create_mp4(dir_dataset, dir_dataset_new):
                             path_file_mp4 = os.path.join(new_dir_path, name_file_no_ext + ".mp4")
                             print("Take the .avi file: {} - Generate the .mp4 file {}: ".format(path_file_avi, path_file_mp4))
                             convert_avi_to_mp4(path_file_avi, path_file_mp4)
+                            print("Generated the .mp4 file {}: ".format(path_file_mp4))
+                            time.sleep(5)
                             counter += 1
 
                 print("------------------------------------")

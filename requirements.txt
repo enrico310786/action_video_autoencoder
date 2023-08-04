@@ -15,6 +15,7 @@ PyQt5==5.13.2
 transformers==4.30.2
 pytorchvideo==0.1.5
 sk-video==1.1.10
+boto3
 
 Flask==2.1.0
 Flask-Cors==3.0.10

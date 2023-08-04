@@ -7,6 +7,7 @@ import torch
 from prettytable import PrettyTable
 from transformers import AutoImageProcessor
 from model import TimeAutoencoder
+import torch.nn as nn
 
 
 from pytorchvideo.transforms import (
@@ -144,5 +145,16 @@ if __name__ == '__main__':
 
     # forward pass
     outputs = model(inputs)
-    print(outputs.size())
-    print(type(outputs))
+    print("outputs.size():", outputs.size())
+    print("output: {}".format(outputs))
+
+    target = model.base_model(inputs)
+    print("target.size():", target.size())
+
+    loss = nn.MSELoss()
+    err = loss(outputs, target)
+    print("err", err)
+
+    latent = model.encoder(target)
+    print("latent.size():", latent.size())
+
