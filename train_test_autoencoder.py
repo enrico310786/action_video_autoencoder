@@ -128,23 +128,23 @@ def find_errors_and_latents_distribution(device,
         #outputs_array = np.array(outputs_array)
         #target_array = np.array(target_array)
 
-        print('class_labels.shape: ', class_labels.shape)
-        print('latents_array.shape: ', latents_array.shape)
-        print('outputs_array.shape: ', outputs_array.shape)
-        print('target_array.shape: ', target_array.shape)
+        #print('class_labels.shape: ', class_labels.shape)
+        #print('latents_array.shape: ', latents_array.shape)
+        #print('outputs_array.shape: ', outputs_array.shape)
+        #print('target_array.shape: ', target_array.shape)
 
         if len(centroids) == 0:
             # calculate the centroid of the latent vectors for each class. Iter over the label of each class
             for idx in range(number_of_classes):
                 filter_idxs = np.where(class_labels == idx)[0]
-                print("filter_idxs: ", filter_idxs)
+                #print("filter_idxs: ", filter_idxs)
                 latents_array_filtered = np.take(latents_array, filter_idxs, 0)
                 centroid = np.mean(latents_array_filtered, axis=0)
                 centroids.append(centroid)
         centroids = np.array(centroids)
 
         for idx in range(number_of_classes):
-            print("Examin class label: ", idx)
+            #print("Examin class label: ", idx)
 
             filter_idxs = np.where(class_labels == idx)[0]
             latents_array_filtered = np.take(latents_array, filter_idxs, 0)
@@ -175,7 +175,6 @@ def find_errors_and_latents_distribution(device,
                 max_dists = max_dist
             else:
                 max_dists = np.vstack((max_dists, max_dist))
-
 
             #mean_errors.append(mean_error)
             #max_errors.append(max_error)
@@ -271,6 +270,7 @@ def train_model(cfg,
                 best_val_epoch_loss,
                 checkpoint_dir,
                 saving_dir_experiments,
+                period_eval,
                 epoch_start_unfreeze=None,
                 layer_start_unfreeze=None,
                 aws_bucket=None,
@@ -337,62 +337,69 @@ def train_model(cfg,
             val_epoch_losses.append(validation_loss)
         val_epoch_loss = np.mean(val_epoch_losses)
 
+        if (epoch+1)%period_eval == 0:
+            print("Start validation of errors and distances")
         # calculate the errors and distances distribution on the train set
-        mean_errors_train, max_errors_train, mean_dists_train, max_dists_train, centroids_train = find_errors_and_latents_distribution(device=device,
-                                                                                                                                       model=model,
-                                                                                                                                       dataloader=train_loader,
-                                                                                                                                       number_of_classes=number_of_classes)
+            mean_errors_train, max_errors_train, mean_dists_train, max_dists_train, centroids_train = find_errors_and_latents_distribution(device=device,
+                                                                                                                                           model=model,
+                                                                                                                                           dataloader=train_loader,
+                                                                                                                                           number_of_classes=number_of_classes)
 
-        # calculate the errors and distances distribution on the validation set
-        mean_errors_val, max_errors_val, mean_dists_val, max_dists_val, _ = find_errors_and_latents_distribution(device=device,
-                                                                                                                 model=model,
-                                                                                                                 dataloader=val_loader,
-                                                                                                                 number_of_classes=number_of_classes,
-                                                                                                                 centroids=centroids_train)
+            # calculate the errors and distances distribution on the validation set
+            mean_errors_val, max_errors_val, mean_dists_val, max_dists_val, _ = find_errors_and_latents_distribution(device=device,
+                                                                                                                     model=model,
+                                                                                                                     dataloader=val_loader,
+                                                                                                                     number_of_classes=number_of_classes,
+                                                                                                                     centroids=centroids_train)
 
-        wandb.log({'Learning Rate': optimizer.param_groups[0]['lr'],
-                   'Train Loss': train_epoch_loss,
-                   'Valid Loss': val_epoch_loss,
-                   'Mean_error_train_0': mean_errors_train[0],
-                   'Mean_error_train_1': mean_errors_train[1],
-                   'Mean_error_train_2': mean_errors_train[2],
-                   'Mean_error_train_3': mean_errors_train[3],
-                   'Mean_error_train_4': mean_errors_train[4],
-                   'Mean_error_train_5': mean_errors_train[5],
-                   'Mean_error_train_6': mean_errors_train[6],
-                   'Mean_error_train_7': mean_errors_train[7],
-                   'Mean_error_train_8': mean_errors_train[8],
-                   'Mean_error_train_9': mean_errors_train[9],
-                   'Mean_error_val_0': mean_errors_val[0],
-                   'Mean_error_val_1': mean_errors_val[1],
-                   'Mean_error_val_2': mean_errors_val[2],
-                   'Mean_error_val_3': mean_errors_val[3],
-                   'Mean_error_val_4': mean_errors_val[4],
-                   'Mean_error_val_5': mean_errors_val[5],
-                   'Mean_error_val_6': mean_errors_val[6],
-                   'Mean_error_val_7': mean_errors_val[7],
-                   'Mean_error_val_8': mean_errors_val[8],
-                   'Mean_error_val_9': mean_errors_val[9],
-                   'Mean_dist_train_0': mean_dists_train[0],
-                   'Mean_dist_train_1': mean_dists_train[1],
-                   'Mean_dist_train_2': mean_dists_train[2],
-                   'Mean_dist_train_3': mean_dists_train[3],
-                   'Mean_dist_train_4': mean_dists_train[4],
-                   'Mean_dist_train_5': mean_dists_train[5],
-                   'Mean_dist_train_6': mean_dists_train[6],
-                   'Mean_dist_train_7': mean_dists_train[7],
-                   'Mean_dist_train_8': mean_dists_train[8],
-                   'Mean_dist_train_9': mean_dists_train[9],
-                   'Mean_dist_val_0': mean_dists_val[0],
-                   'Mean_dist_val_1': mean_dists_val[1],
-                   'Mean_dist_val_2': mean_dists_val[2],
-                   'Mean_dist_val_3': mean_dists_val[3],
-                   'Mean_dist_val_4': mean_dists_val[4],
-                   'Mean_dist_val_5': mean_dists_val[5],
-                   'Mean_dist_val_6': mean_dists_val[6],
-                   'Mean_dist_val_7': mean_dists_val[7],
-                   'Mean_dist_val_8': mean_dists_val[8],
-                   'Mean_dist_val_9': mean_dists_val[9]})
+            wandb.log({'Learning Rate': optimizer.param_groups[0]['lr'],
+                       'Train Loss': train_epoch_loss,
+                       'Valid Loss': val_epoch_loss,
+                       'Mean_error_train_0': mean_errors_train[0],
+                       'Mean_error_train_1': mean_errors_train[1],
+                       'Mean_error_train_2': mean_errors_train[2],
+                       'Mean_error_train_3': mean_errors_train[3],
+                       'Mean_error_train_4': mean_errors_train[4],
+                       'Mean_error_train_5': mean_errors_train[5],
+                       'Mean_error_train_6': mean_errors_train[6],
+                       'Mean_error_train_7': mean_errors_train[7],
+                       'Mean_error_train_8': mean_errors_train[8],
+                       'Mean_error_train_9': mean_errors_train[9],
+                       'Mean_error_val_0': mean_errors_val[0],
+                       'Mean_error_val_1': mean_errors_val[1],
+                       'Mean_error_val_2': mean_errors_val[2],
+                       'Mean_error_val_3': mean_errors_val[3],
+                       'Mean_error_val_4': mean_errors_val[4],
+                       'Mean_error_val_5': mean_errors_val[5],
+                       'Mean_error_val_6': mean_errors_val[6],
+                       'Mean_error_val_7': mean_errors_val[7],
+                       'Mean_error_val_8': mean_errors_val[8],
+                       'Mean_error_val_9': mean_errors_val[9],
+                       'Mean_dist_train_0': mean_dists_train[0],
+                       'Mean_dist_train_1': mean_dists_train[1],
+                       'Mean_dist_train_2': mean_dists_train[2],
+                       'Mean_dist_train_3': mean_dists_train[3],
+                       'Mean_dist_train_4': mean_dists_train[4],
+                       'Mean_dist_train_5': mean_dists_train[5],
+                       'Mean_dist_train_6': mean_dists_train[6],
+                       'Mean_dist_train_7': mean_dists_train[7],
+                       'Mean_dist_train_8': mean_dists_train[8],
+                       'Mean_dist_train_9': mean_dists_train[9],
+                       'Mean_dist_val_0': mean_dists_val[0],
+                       'Mean_dist_val_1': mean_dists_val[1],
+                       'Mean_dist_val_2': mean_dists_val[2],
+                       'Mean_dist_val_3': mean_dists_val[3],
+                       'Mean_dist_val_4': mean_dists_val[4],
+                       'Mean_dist_val_5': mean_dists_val[5],
+                       'Mean_dist_val_6': mean_dists_val[6],
+                       'Mean_dist_val_7': mean_dists_val[7],
+                       'Mean_dist_val_8': mean_dists_val[8],
+                       'Mean_dist_val_9': mean_dists_val[9]})
+        else:
+            wandb.log({'Learning Rate': optimizer.param_groups[0]['lr'],
+                       'Train Loss': train_epoch_loss,
+                       'Valid Loss': val_epoch_loss})
+
         print("Epoch: {} - LR:{} - Train Loss: {:.4f} - Val Loss: {:.4f}".format(int(epoch), optimizer.param_groups[0]['lr'], train_epoch_loss, val_epoch_loss))
 
         train_losses.append(train_epoch_loss)
@@ -494,6 +501,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
     lr_factor = model_cfg.get("lr_factor", None)
     T_max = model_cfg.get("T_max", None)
     eta_min = model_cfg.get("eta_min", None)
+    period_eval = model_cfg['period_eval']
 
     # load ans shuffle csv dataset
     df_dataset_train = pd.read_csv(path_dataset_train_csv)
@@ -606,6 +614,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                     best_val_epoch_loss=best_val_epoch_loss,
                     checkpoint_dir=checkpoint_dir,
                     saving_dir_experiments=saving_dir_experiments,
+                    period_eval=period_eval,
                     epoch_start_unfreeze=epoch_start_unfreeze,
                     layer_start_unfreeze=layer_start_unfreeze,
                     scheduler_type=scheduler_type,
