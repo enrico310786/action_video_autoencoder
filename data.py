@@ -47,7 +47,7 @@ class ClassificationDataset(torch.utils.data.Dataset):
                         Normalize(self.mean, self.std),
                         RandomShortSideScale(min_size=self.min_size, max_size=self.max_size),
                         RandomCrop(self.resize_to),
-                        RandomHorizontalFlip(p=0.5),
+                        #RandomHorizontalFlip(p=0.5),
                     ]
                 ),
             )
@@ -59,7 +59,7 @@ class ClassificationDataset(torch.utils.data.Dataset):
                         UniformTemporalSubsample(self.num_frames_to_sample),
                         Lambda(lambda x: x / 255.0),
                         Normalize(self.mean, self.std),
-                        Resize(self.resize_to),
+                        Resize((self.resize_to, self.resize_to))
                     ]
                 ),
             )

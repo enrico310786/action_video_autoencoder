@@ -98,6 +98,7 @@ if __name__ == '__main__':
     print("************************************************************")
     print("************************************************************")
 
+    '''
     image_processor = AutoImageProcessor.from_pretrained("facebook/timesformer-base-finetuned-k400")
 
     mean = image_processor.image_mean
@@ -158,3 +159,4 @@ if __name__ == '__main__':
     latent = model.encoder(target)
     print("latent.size():", latent.size())
 
+    '''
