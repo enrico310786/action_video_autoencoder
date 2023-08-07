@@ -41,47 +41,35 @@ def val_loss(inputs, model, criterion):
     return val_loss.item()
 
 
-def find_errors(array, array_hat):
-    # givent two array with same shape (n, m) i have to find the
-    # mse between the first component of the first array and the corresponding fisrt component of the hat array -> thus use axis = 1
-    errors = (np.square(array - array_hat)).mean(axis=1)
-    mean_error = np.mean(errors)
-    max_error = np.max(errors)
-    return mean_error, max_error
+def calculate_errors_and_distributions(device,
+                                       model,
+                                       dataloader,
+                                       label2class,
+                                       type_dataset,
+                                       path_save,
+                                       embedding_centroids=None,
+                                       latent_centroids=None):
+    '''
+    1) Calculate the error reconstruction of the embedding vectors
+    2) Calculate the train latent centroids for each class
+    3) For each class, calculate the distances of the latent arrays from the corresponding centroids
+    4) Calculate the train embedding centroids for each class
+    5) For each class, calculate the distances of the embeddings from the corresponding centroids
+    6) Look the TSNE distribution of the train embedding arrays and of the train latent arrays
+    '''
 
+    df = pd.DataFrame(columns=['CLASS', 'LABEL', 'ERROR', 'LATENT_DISTANCE', 'EMBEDDING_DISTANCE'])
 
-def find_distances(latents, centroid):
-    # find the mean and the max distance between latents array and the corresponding centroid
-    list_dists = []
-    for latent in latents:
-        dist = np.linalg.norm(latent - centroid)
-        list_dists.append(dist)
-    list_dists = np.array(list_dists)
-    mean_dist = np.mean(list_dists)
-    max_dist = np.max(list_dists)
-    return mean_dist, max_dist
-
-
-def find_errors_and_latents_distribution(device,
-                                         model,
-                                         dataloader,
-                                         number_of_classes,
-                                         centroids=None,
-                                         path_save=None,
-                                         type_dataset=None):
-
-    # centroids is the list of the centroids of each class calculated in the train set
-    if centroids is None:
-        centroids = []
+    # centroids is the list of the centroids of each class calculated in the train set, both for latent arrays and embedding arrays
+    if embedding_centroids is None:
+        embedding_centroids = []
+    if latent_centroids is None:
+        latent_centroids = []
 
     class_labels = []
     latents_array = None
-    outputs_array = None
-    target_array = None
-    mean_errors = None
-    max_errors = None
-    mean_dists = None
-    max_dists = None
+    reconstructed_embeddings_array = None
+    embeddings_array = None
     model = model.eval()
 
     with torch.no_grad():
@@ -89,17 +77,9 @@ def find_errors_and_latents_distribution(device,
         for inputs, labels in dataloader:
             inputs = inputs.to(device)
             labels = labels.to(device)
-            targets = model.base_model(inputs)
-            outputs = model(inputs)
-            latents = model.encoder(targets)
-
-            #print('latents.size(): ', latents.size())
-            #print('outputs.size(): ', outputs.size())
-            #print('targets.size(): ', targets.size())
-
-            #print('latents.detach().cpu().numpy().shape: ', latents.detach().cpu().numpy().shape)
-            #print('latents.detach().cpu().numpy().shape: ', latents.detach().cpu().numpy().shape)
-            #print('latents.detach().cpu().numpy().shape: ', latents.detach().cpu().numpy().shape)
+            embeddings = model.base_model(inputs)
+            reconstructed_embeddings = model(inputs)
+            latents = model.encoder(embeddings)
 
             # stack the results
             if latents_array is None:
@@ -107,154 +87,114 @@ def find_errors_and_latents_distribution(device,
             else:
                 latents_array = np.vstack((latents_array, latents.detach().cpu().numpy()))
 
-            if target_array is None:
-                target_array = targets.detach().cpu().numpy()
+            if embeddings_array is None:
+                embeddings_array = embeddings.detach().cpu().numpy()
             else:
-                target_array = np.vstack((target_array, targets.detach().cpu().numpy()))
+                embeddings_array = np.vstack((embeddings_array, embeddings.detach().cpu().numpy()))
 
-            if outputs_array is None:
-                outputs_array = outputs.detach().cpu().numpy()
+            if reconstructed_embeddings_array is None:
+                reconstructed_embeddings_array = reconstructed_embeddings.detach().cpu().numpy()
             else:
-                outputs_array = np.vstack((outputs_array, outputs.detach().cpu().numpy()))
+                reconstructed_embeddings_array = np.vstack((reconstructed_embeddings_array, reconstructed_embeddings.detach().cpu().numpy()))
 
-            #latents_array.append(latents.detach().cpu().numpy())
-            #target_array.append(targets.detach().cpu().numpy())
-            #outputs_array.append(outputs.detach().cpu().numpy())
             class_labels.extend(labels.detach().cpu().numpy().tolist())
 
         # transform to numpy array
         class_labels = np.array(class_labels)
-        #latents_array = np.array(latents_array)
-        #outputs_array = np.array(outputs_array)
-        #target_array = np.array(target_array)
 
-        #print('class_labels.shape: ', class_labels.shape)
-        #print('latents_array.shape: ', latents_array.shape)
-        #print('outputs_array.shape: ', outputs_array.shape)
-        #print('target_array.shape: ', target_array.shape)
+        print('class_labels.shape: ', class_labels.shape)
+        print('latents_array.shape: ', latents_array.shape)
+        print('reconstructed_embeddings_array.shape: ', reconstructed_embeddings_array.shape)
+        print('embeddings_array.shape: ', embeddings_array.shape)
 
-        if len(centroids) == 0:
-            # calculate the centroid of the latent vectors for each class. Iter over the label of each class
-            for idx in range(number_of_classes):
+        if len(embedding_centroids) == 0:
+            # calculate the centroid of the embedding vectors for each class. Iter over the label of each class
+            for idx in label2class.keys():
                 filter_idxs = np.where(class_labels == idx)[0]
                 #print("filter_idxs: ", filter_idxs)
                 latents_array_filtered = np.take(latents_array, filter_idxs, 0)
                 centroid = np.mean(latents_array_filtered, axis=0)
-                centroids.append(centroid)
-        centroids = np.array(centroids)
+                embedding_centroids.append(centroid)
+        embedding_centroids = np.array(embedding_centroids)
 
-        for idx in range(number_of_classes):
-            #print("Examin class label: ", idx)
+        if len(latent_centroids) == 0:
+            # calculate the centroid of the latent vectors for each class. Iter over the label of each class
+            for idx in label2class.keys():
+                filter_idxs = np.where(class_labels == idx)[0]
+                #print("filter_idxs: ", filter_idxs)
+                embeddings_array_filtered = np.take(embeddings_array, filter_idxs, 0)
+                centroid = np.mean(embeddings_array_filtered, axis=0)
+                latent_centroids.append(centroid)
+        latent_centroids = np.array(latent_centroids)
 
-            filter_idxs = np.where(class_labels == idx)[0]
-            latents_array_filtered = np.take(latents_array, filter_idxs, 0)
-            outputs_array_filtered = np.take(outputs_array, filter_idxs, 0)
-            target_array_filtered = np.take(target_array, filter_idxs, 0)
-            centroid = centroids[idx]
+        # iter over the array to find error and distances from the correspondig centroid. The centroid is found using the label of the class
+        for label, emb, rec_emb, latent in zip(class_labels, embeddings_array, reconstructed_embeddings_array, latents_array):
+            error = (np.square(emb - rec_emb)).mean()
+            latent_dist = np.linalg.norm(latent - latent_centroids[label])
+            emb_dist = np.linalg.norm(emb - embedding_centroids[label])
+            category = label2class[label]
 
-            mean_error, max_error = find_errors(target_array_filtered, outputs_array_filtered)
-            mean_dist, max_dist = find_distances(latents_array_filtered, centroid)
+            df = df.append({'CLASS': category,
+                            'LABEL': label,
+                            'ERROR': error,
+                            'LATENT_DISTANCE': latent_dist,
+                            'EMBEDDING_DISTANCE': emb_dist}, ignore_index=True)
 
-            # stack the results of errors and distances
-            if mean_errors is None:
-                mean_errors = mean_error
-            else:
-                mean_errors = np.vstack((mean_errors, mean_error))
+        print("Save the errors and dist distribution dataset at: ", os.path.join(path_save, type_dataset + "_errors_dist_distribution.csv"))
+        df.to_csv(os.path.join(path_save, type_dataset + "_errors_dist_distribution.csv"), index=False)
 
-            if max_errors is None:
-                max_errors = max_error
-            else:
-                max_errors = np.vstack((max_errors, max_error))
+        if type_dataset == "TRAIN":
 
-            if mean_dists is None:
-                mean_dists = mean_dist
-            else:
-                mean_dists = np.vstack((mean_dists, mean_dist))
-
-            if max_dists is None:
-                max_dists = max_dist
-            else:
-                max_dists = np.vstack((max_dists, max_dist))
-
-            #mean_errors.append(mean_error)
-            #max_errors.append(max_error)
-            #mean_dists.append(mean_dist)
-            #max_dists.append(max_dist)
-
-        if path_save is not None and type_dataset is not None:
-            f = open(os.path.join(path_save, type_dataset + "_report.txt"), 'w')
-            f.write('Report dataset{}'.format(type_dataset))
-            f.write('\n\n')
-            f.write('Mean_error_0: {}\n'.format(mean_errors[0]))
-            f.write('Mean_error_1: {}\n'.format(mean_errors[1]))
-            f.write('Mean_error_2: {}\n'.format(mean_errors[2]))
-            f.write('Mean_error_3: {}\n'.format(mean_errors[3]))
-            f.write('Mean_error_4: {}\n'.format(mean_errors[4]))
-            f.write('Mean_error_5: {}\n'.format(mean_errors[5]))
-            f.write('Mean_error_6: {}\n'.format(mean_errors[6]))
-            f.write('Mean_error_7: {}\n'.format(mean_errors[7]))
-            f.write('Mean_error_8: {}\n'.format(mean_errors[8]))
-            f.write('Mean_error_9: {}\n'.format(mean_errors[9]))
-            f.write('\n\n')
-            f.write('Max_error_0: {}\n'.format(max_errors[0]))
-            f.write('Max_error_1: {}\n'.format(max_errors[1]))
-            f.write('Max_error_2: {}\n'.format(max_errors[2]))
-            f.write('Max_error_3: {}\n'.format(max_errors[3]))
-            f.write('Max_error_4: {}\n'.format(max_errors[4]))
-            f.write('Max_error_5: {}\n'.format(max_errors[5]))
-            f.write('Max_error_6: {}\n'.format(max_errors[6]))
-            f.write('Max_error_7: {}\n'.format(max_errors[7]))
-            f.write('Max_error_8: {}\n'.format(max_errors[8]))
-            f.write('Max_error_9: {}\n'.format(max_errors[9]))
-            f.write('\n\n')
-            f.write('Mean_dist_0: {}\n'.format(mean_dists[0]))
-            f.write('Mean_dist_1: {}\n'.format(mean_dists[1]))
-            f.write('Mean_dist_2: {}\n'.format(mean_dists[2]))
-            f.write('Mean_dist_3: {}\n'.format(mean_dists[3]))
-            f.write('Mean_dist_4: {}\n'.format(mean_dists[4]))
-            f.write('Mean_dist_5: {}\n'.format(mean_dists[5]))
-            f.write('Mean_dist_6: {}\n'.format(mean_dists[6]))
-            f.write('Mean_dist_7: {}\n'.format(mean_dists[7]))
-            f.write('Mean_dist_8: {}\n'.format(mean_dists[8]))
-            f.write('Mean_dist_9: {}\n'.format(mean_dists[9]))
-            f.write('\n\n')
-            f.write('Max_dist_0: {}\n'.format(max_dists[0]))
-            f.write('Max_dist_1: {}\n'.format(max_dists[1]))
-            f.write('Max_dist_2: {}\n'.format(max_dists[2]))
-            f.write('Max_dist_3: {}\n'.format(max_dists[3]))
-            f.write('Max_dist_4: {}\n'.format(max_dists[4]))
-            f.write('Max_dist_5: {}\n'.format(max_dists[5]))
-            f.write('Max_dist_6: {}\n'.format(max_dists[6]))
-            f.write('Max_dist_7: {}\n'.format(max_dists[7]))
-            f.write('Max_dist_8: {}\n'.format(max_dists[8]))
-            f.write('Max_dist_9: {}\n'.format(max_dists[9]))
-
-            if type_dataset == "TRAIN":
-                f.write('\n\n')
-                f.write('centroid_0: {}\n\n'.format(centroids[0]))
-                f.write('centroid_1: {}\n\n'.format(centroids[1]))
-                f.write('centroid_2: {}\n\n'.format(centroids[2]))
-                f.write('centroid_3: {}\n\n'.format(centroids[3]))
-                f.write('centroid_4: {}\n\n'.format(centroids[4]))
-                f.write('centroid_5: {}\n\n'.format(centroids[5]))
-                f.write('centroid_6: {}\n\n'.format(centroids[6]))
-                f.write('centroid_7: {}\n\n'.format(centroids[7]))
-                f.write('centroid_8: {}\n\n'.format(centroids[8]))
-                f.write('centroid_9: {}\n\n'.format(centroids[9]))
-
-            f.close()
-
-        if path_save is not None and type_dataset == "TRAIN":
+            # find TSNE distribution for latent array
+            print("find TSNE distribution for latent array")
             tsne = TSNE(2)
             clustered = tsne.fit_transform(latents_array)
-
             fig = plt.figure(figsize=(12, 10))
             cmap = plt.get_cmap('Spectral', 10)
             plt.scatter(*zip(*clustered), c=class_labels, cmap=cmap)
             plt.colorbar(drawedges=True)
             fig.savefig(os.path.join(path_save, "TSNE_latent_array_train.png"))
 
-        return mean_errors, max_errors, mean_dists, max_dists, centroids
+            # find TSNE distribution for embedding array
+            print("find TSNE distribution for embedding array")
+            tsne = TSNE(2)
+            clustered = tsne.fit_transform(embeddings_array)
+            fig = plt.figure(figsize=(12, 10))
+            cmap = plt.get_cmap('Spectral', 10)
+            plt.scatter(*zip(*clustered), c=class_labels, cmap=cmap)
+            plt.colorbar(drawedges=True)
+            fig.savefig(os.path.join(path_save, "TSNE_embedding_array_train.png"))
+
+            f = open(os.path.join(path_save, "train_ambedding_latent_centroids.txt"), 'w')
+            f.write('Latent centroids')
+            f.write('\n\n')
+            f.write('latent_centroid_0: {}\n\n'.format(latent_centroids[0]))
+            f.write('latent_centroid_1: {}\n\n'.format(latent_centroids[1]))
+            f.write('latent_centroid_2: {}\n\n'.format(latent_centroids[2]))
+            f.write('latent_centroid_3: {}\n\n'.format(latent_centroids[3]))
+            f.write('latent_centroid_4: {}\n\n'.format(latent_centroids[4]))
+            f.write('latent_centroid_5: {}\n\n'.format(latent_centroids[5]))
+            f.write('latent_centroid_6: {}\n\n'.format(latent_centroids[6]))
+            f.write('latent_centroid_7: {}\n\n'.format(latent_centroids[7]))
+            f.write('latent_centroid_8: {}\n\n'.format(latent_centroids[8]))
+            f.write('latent_centroid_9: {}\n\n'.format(latent_centroids[9]))
+            f.write('\n\n')
+            f.write('Embedding centroids')
+            f.write('\n\n')
+            f.write('embedding_centroid_0: {}\n\n'.format(embedding_centroids[0]))
+            f.write('embedding_centroid_1: {}\n\n'.format(embedding_centroids[1]))
+            f.write('embedding_centroid_2: {}\n\n'.format(embedding_centroids[2]))
+            f.write('embedding_centroid_3: {}\n\n'.format(embedding_centroids[3]))
+            f.write('embedding_centroid_4: {}\n\n'.format(embedding_centroids[4]))
+            f.write('embedding_centroid_5: {}\n\n'.format(embedding_centroids[5]))
+            f.write('embedding_centroid_6: {}\n\n'.format(embedding_centroids[6]))
+            f.write('embedding_centroid_7: {}\n\n'.format(embedding_centroids[7]))
+            f.write('embedding_centroid_8: {}\n\n'.format(embedding_centroids[8]))
+            f.write('embedding_centroid_9: {}\n\n'.format(embedding_centroids[9]))
+
+            f.close()
+
+        return latent_centroids, embedding_centroids
 
 
 def train_model(cfg,
@@ -318,7 +258,7 @@ def train_model(cfg,
 
             print("*****************************************")
 
-        # define empty lists for the values of the loss and the accuracy of train and validation obtained in the batch of the current epoch
+        # define empty lists for the values of the loss of train and validation obtained in the batch of the current epoch
         # then at the end I take the average and I get the final values of the whole era
         train_epoch_losses = []
         val_epoch_losses = []
@@ -337,68 +277,9 @@ def train_model(cfg,
             val_epoch_losses.append(validation_loss)
         val_epoch_loss = np.mean(val_epoch_losses)
 
-        if (epoch+1)%period_eval == 0:
-            print("Start validation of errors and distances")
-        # calculate the errors and distances distribution on the train set
-            mean_errors_train, max_errors_train, mean_dists_train, max_dists_train, centroids_train = find_errors_and_latents_distribution(device=device,
-                                                                                                                                           model=model,
-                                                                                                                                           dataloader=train_loader,
-                                                                                                                                           number_of_classes=number_of_classes)
-
-            # calculate the errors and distances distribution on the validation set
-            mean_errors_val, max_errors_val, mean_dists_val, max_dists_val, _ = find_errors_and_latents_distribution(device=device,
-                                                                                                                     model=model,
-                                                                                                                     dataloader=val_loader,
-                                                                                                                     number_of_classes=number_of_classes,
-                                                                                                                     centroids=centroids_train)
-
-            wandb.log({'Learning Rate': optimizer.param_groups[0]['lr'],
-                       'Train Loss': train_epoch_loss,
-                       'Valid Loss': val_epoch_loss,
-                       'Mean_error_train_0': mean_errors_train[0],
-                       'Mean_error_train_1': mean_errors_train[1],
-                       'Mean_error_train_2': mean_errors_train[2],
-                       'Mean_error_train_3': mean_errors_train[3],
-                       'Mean_error_train_4': mean_errors_train[4],
-                       'Mean_error_train_5': mean_errors_train[5],
-                       'Mean_error_train_6': mean_errors_train[6],
-                       'Mean_error_train_7': mean_errors_train[7],
-                       'Mean_error_train_8': mean_errors_train[8],
-                       'Mean_error_train_9': mean_errors_train[9],
-                       'Mean_error_val_0': mean_errors_val[0],
-                       'Mean_error_val_1': mean_errors_val[1],
-                       'Mean_error_val_2': mean_errors_val[2],
-                       'Mean_error_val_3': mean_errors_val[3],
-                       'Mean_error_val_4': mean_errors_val[4],
-                       'Mean_error_val_5': mean_errors_val[5],
-                       'Mean_error_val_6': mean_errors_val[6],
-                       'Mean_error_val_7': mean_errors_val[7],
-                       'Mean_error_val_8': mean_errors_val[8],
-                       'Mean_error_val_9': mean_errors_val[9],
-                       'Mean_dist_train_0': mean_dists_train[0],
-                       'Mean_dist_train_1': mean_dists_train[1],
-                       'Mean_dist_train_2': mean_dists_train[2],
-                       'Mean_dist_train_3': mean_dists_train[3],
-                       'Mean_dist_train_4': mean_dists_train[4],
-                       'Mean_dist_train_5': mean_dists_train[5],
-                       'Mean_dist_train_6': mean_dists_train[6],
-                       'Mean_dist_train_7': mean_dists_train[7],
-                       'Mean_dist_train_8': mean_dists_train[8],
-                       'Mean_dist_train_9': mean_dists_train[9],
-                       'Mean_dist_val_0': mean_dists_val[0],
-                       'Mean_dist_val_1': mean_dists_val[1],
-                       'Mean_dist_val_2': mean_dists_val[2],
-                       'Mean_dist_val_3': mean_dists_val[3],
-                       'Mean_dist_val_4': mean_dists_val[4],
-                       'Mean_dist_val_5': mean_dists_val[5],
-                       'Mean_dist_val_6': mean_dists_val[6],
-                       'Mean_dist_val_7': mean_dists_val[7],
-                       'Mean_dist_val_8': mean_dists_val[8],
-                       'Mean_dist_val_9': mean_dists_val[9]})
-        else:
-            wandb.log({'Learning Rate': optimizer.param_groups[0]['lr'],
-                       'Train Loss': train_epoch_loss,
-                       'Valid Loss': val_epoch_loss})
+        wandb.log({'Learning Rate': optimizer.param_groups[0]['lr'],
+                   'Train Loss': train_epoch_loss,
+                   'Valid Loss': val_epoch_loss})
 
         print("Epoch: {} - LR:{} - Train Loss: {:.4f} - Val Loss: {:.4f}".format(int(epoch), optimizer.param_groups[0]['lr'], train_epoch_loss, val_epoch_loss))
 
@@ -634,45 +515,60 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
             model.load_state_dict(checkpoint['model'])
             model = model.to(device)
 
+        # go through the lines of the dataset
+        class2label = {}
+        for index, row in df_dataset_train.iterrows():
+            class_name = row["CLASS"]
+            label = row["LABEL"]
+
+            if class_name not in class2label:
+                class2label[class_name] = label
+        #sort the value of the label
+        class2label = dict(sorted(class2label.items(), key=lambda item: item[1]))
+        label2class = {k: v for (v, k) in class2label.items()}
+        print("class2label: ", class2label)
+        print("label2class: ", label2class)
+
         print("-------------------------------------------------------------------")
         print("-------------------------------------------------------------------")
 
         # 12 - execute the inferences on the train, val and test set
         print("Inference on train dataset")
-
-        _, _, _, _, centroids_train = find_errors_and_latents_distribution(device=device,
-                                                                           model=model,
-                                                                           dataloader=train_loader,
-                                                                           number_of_classes=cfg['data']['number_of_classes'],
-                                                                           path_save=checkpoint_dir,
-                                                                           type_dataset="TRAIN")
+        train_latent_centroids, train_embedding_centroids = calculate_errors_and_distributions(device,
+                                                                                               model,
+                                                                                               train_loader,
+                                                                                               label2class,
+                                                                                               type_dataset="TRAIN",
+                                                                                               path_save=checkpoint_dir,
+                                                                                               embedding_centroids=None,
+                                                                                               latent_centroids=None)
 
         print("-------------------------------------------------------------------")
         print("-------------------------------------------------------------------")
 
         print("Inference on val dataset")
-
-        # calculate the errors and distances distribution on the validation set
-        _, _, _, _, _ = find_errors_and_latents_distribution(device=device,
-                                                             model=model,
-                                                             dataloader=val_loader,
-                                                             number_of_classes=cfg['data']['number_of_classes'],
-                                                             centroids=centroids_train,
-                                                             path_save=checkpoint_dir,
-                                                             type_dataset="VAL")
+        _, _ = calculate_errors_and_distributions(device,
+                                                  model,
+                                                  val_loader,
+                                                  label2class,
+                                                  type_dataset="VAL",
+                                                  path_save=checkpoint_dir,
+                                                  embedding_centroids=train_embedding_centroids,
+                                                  latent_centroids=train_latent_centroids)
 
         if test_loader is not None:
             print("-------------------------------------------------------------------")
             print("-------------------------------------------------------------------")
 
             print("Inference on test dataset")
-            _, _, _, _, _ = find_errors_and_latents_distribution(device=device,
-                                                                 model=model,
-                                                                 dataloader=test_loader,
-                                                                 number_of_classes=cfg['data']['number_of_classes'],
-                                                                 centroids=centroids_train,
-                                                                 path_save=checkpoint_dir,
-                                                                 type_dataset="TEST")
+            _, _ = calculate_errors_and_distributions(device,
+                                                      model,
+                                                      test_loader,
+                                                      label2class,
+                                                      type_dataset="TEST",
+                                                      path_save=checkpoint_dir,
+                                                      embedding_centroids=train_embedding_centroids,
+                                                      latent_centroids=train_latent_centroids)
 
         if aws_bucket is not None and aws_directory is not None:
             print("Final upload on S3")

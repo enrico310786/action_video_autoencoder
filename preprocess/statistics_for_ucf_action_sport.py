@@ -20,7 +20,7 @@ print(df_grouped_train)
 plt.subplot(1,3,1)
 sns.countplot(x=df_train["CLASS"])
 plt.xticks(rotation=30, ha='right', rotation_mode='anchor')
-plt.title('Train set image distribution', fontsize=16)
+plt.title('Train set clip distribution', fontsize=16)
 
 print("----------------------------------------------")
 
@@ -30,7 +30,7 @@ print(df_grouped_test)
 plt.subplot(1,3,2)
 sns.countplot(x=df_test["CLASS"])
 plt.xticks(rotation=30, ha='right', rotation_mode='anchor')
-plt.title('Test set image distribution', fontsize=16)
+plt.title('Test set clip distribution', fontsize=16)
 print("----------------------------------------------")
 
 
@@ -40,7 +40,7 @@ print(df_grouped_val)
 plt.subplot(1,3,3)
 sns.countplot(x=df_val["CLASS"])
 plt.xticks(rotation=30, ha='right', rotation_mode='anchor')
-plt.title('Val set image distribution', fontsize=16)
+plt.title('Val set clip distribution', fontsize=16)
 
 
 plt.savefig("/home/enrico/Projects/action_video_autoencoder/preprocess/data_distribution.png")
