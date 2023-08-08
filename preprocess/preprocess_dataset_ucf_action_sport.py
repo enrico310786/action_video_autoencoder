@@ -21,6 +21,8 @@ remapping_actions_dict = {"Golf-Swing-Back": "Golf-Swing",
                           "Kicking-Front": "Kicking",
                           "Kicking-Side": "Kicking"}
 
+anomaly_test_actions = ["Walk-Front", "Lifting", "SkateBoarding-Front"]
+
 PERC_TRAIN = 0.5
 PERC_TEST = 0.4
 NUMBER_VIDEO_TRAIN = 200
@@ -209,81 +211,101 @@ def make_train_test_val_division(path_original_dataset, dir_path_ttv):
         for dir in dirs:
             path_subdir = os.path.join(path_original_dataset, dir)
             print("CLASS: {}".format(dir))
+            # check if the class belongs to the anomaly class
+            if dir in anomaly_test_actions:
+                print("The class {} belongs to the anomaly list".format(dir))
+                # collect the path for mp4 files with duration grater then 1 sec
+                for file in os.listdir(path_subdir):
+                    path_file = os.path.join(path_subdir, file)
+                    if not analyze_video_duration(path_file):
 
-            # collect the path for mp4 files with duration grater then 1 sec
-            list_path_mp4_files = []
-            for file in os.listdir(path_subdir):
-                path_file = os.path.join(path_subdir, file)
-                if not analyze_video_duration(path_file):
-                    list_path_mp4_files.append(path_file)
+                        filename = path_file.split("/")[-1]
+                        dst_dir = os.path.join(dir_path_ttv, "anomaly", dir, filename)
 
-            number_files = len(list_path_mp4_files)
-            index_list = [i for i in range(number_files)]
-            print("Number_files on directory '{}' with duration grater then 1 sec: {}".format(path_subdir, number_files))
+                        CHECK_FOLDER = os.path.isdir(os.path.join(dir_path_ttv, "anomaly", dir))
+                        if not CHECK_FOLDER:
+                            os.makedirs(os.path.join(dir_path_ttv, "anomaly", dir))
 
-            number_file_train = round(number_files*PERC_TRAIN)
-            number_file_test = round(number_files*PERC_TEST)
-
-            sum_train_test = number_file_train + number_file_test
-            #if the sum of the train and test files equals the total number,
-            # I decrease the number of train files by one, so I have space for a validation file
-            if sum_train_test == number_files:
-                if sum_train_test != 2:
-                    number_file_train = number_file_train - 1
-
-            if sum_train_test != 2:
-                train_index_list = random.sample(index_list, k=number_file_train)
-                index_list = list(set(index_list) - set(train_index_list))
-                test_index_list = random.sample(index_list, k=number_file_test)
-                val_index_list = list(set(index_list) - set(test_index_list))
+                        # print("Copia da '{}' a {} ".format(src_dir, dst_dir))
+                        shutil.copy2(path_file, dst_dir)
+                print("Number of files into dir '{}': {}".format(os.path.join(dir_path_ttv, "anomaly", dir),
+                                                                 len(os.listdir(
+                                                                     os.path.join(dir_path_ttv, "anomaly", dir)))))
             else:
-                train_index_list = [0]
-                test_index_list = [1]
-                val_index_list = [1]
+                # collect the path for mp4 files with duration grater then 1 sec
+                list_path_mp4_files = []
+                for file in os.listdir(path_subdir):
+                    path_file = os.path.join(path_subdir, file)
+                    if not analyze_video_duration(path_file):
+                        list_path_mp4_files.append(path_file)
 
-            #TRAIN assignment and copy to train directory
-            for idx in train_index_list:
-                path_file = list_path_mp4_files[idx]
-                filename = path_file.split("/")[-1]
-                dst_dir = os.path.join(dir_path_ttv, "train", dir, filename)
+                number_files = len(list_path_mp4_files)
+                index_list = [i for i in range(number_files)]
+                print("Number_files on directory '{}' with duration grater then 1 sec: {}".format(path_subdir, number_files))
 
-                CHECK_FOLDER = os.path.isdir(os.path.join(dir_path_ttv, "train", dir))
-                if not CHECK_FOLDER:
-                    os.makedirs(os.path.join(dir_path_ttv, "train", dir))
+                number_file_train = round(number_files*PERC_TRAIN)
+                number_file_test = round(number_files*PERC_TEST)
 
-                #print("Copia immagine da '{}' a {} ".format(src_dir, dst_dir))
-                shutil.copy2(path_file, dst_dir)
-            print("Number of files into dir '{}': {}".format(os.path.join(dir_path_ttv, "train", dir), len(os.listdir(os.path.join(dir_path_ttv, "train", dir)))))
+                sum_train_test = number_file_train + number_file_test
+                #if the sum of the train and test files equals the total number,
+                # I decrease the number of train files by one, so I have space for a validation file
+                if sum_train_test == number_files:
+                    if sum_train_test != 2:
+                        number_file_train = number_file_train - 1
 
-            #TEST assignment and copy to test directory
-            for idx in test_index_list:
-                path_file = list_path_mp4_files[idx]
-                filename = path_file.split("/")[-1]
-                dst_dir = os.path.join(dir_path_ttv, "test", dir, filename)
+                if sum_train_test != 2:
+                    train_index_list = random.sample(index_list, k=number_file_train)
+                    index_list = list(set(index_list) - set(train_index_list))
+                    test_index_list = random.sample(index_list, k=number_file_test)
+                    val_index_list = list(set(index_list) - set(test_index_list))
+                else:
+                    train_index_list = [0]
+                    test_index_list = [1]
+                    val_index_list = [1]
 
-                CHECK_FOLDER = os.path.isdir(os.path.join(dir_path_ttv, "test", dir))
-                if not CHECK_FOLDER:
-                    os.makedirs(os.path.join(dir_path_ttv, "test", dir))
+                #TRAIN assignment and copy to train directory
+                for idx in train_index_list:
+                    path_file = list_path_mp4_files[idx]
+                    filename = path_file.split("/")[-1]
+                    dst_dir = os.path.join(dir_path_ttv, "train", dir, filename)
 
-                #print("Copia immagine da '{}' a {} ".format(src_dir, dst_dir))
-                shutil.copy2(path_file, dst_dir)
-            print("Number of files into dir '{}': {}".format(os.path.join(dir_path_ttv, "test", dir),len(os.listdir(os.path.join(dir_path_ttv, "test", dir)))))
+                    CHECK_FOLDER = os.path.isdir(os.path.join(dir_path_ttv, "train", dir))
+                    if not CHECK_FOLDER:
+                        os.makedirs(os.path.join(dir_path_ttv, "train", dir))
 
-            #VAL assignment and copy to val directory
-            for idx in val_index_list:
-                path_file = list_path_mp4_files[idx]
-                filename = path_file.split("/")[-1]
-                dst_dir = os.path.join(dir_path_ttv, "val", dir, filename)
+                    #print("Copia immagine da '{}' a {} ".format(src_dir, dst_dir))
+                    shutil.copy2(path_file, dst_dir)
+                print("Number of files into dir '{}': {}".format(os.path.join(dir_path_ttv, "train", dir), len(os.listdir(os.path.join(dir_path_ttv, "train", dir)))))
 
-                CHECK_FOLDER = os.path.isdir(os.path.join(dir_path_ttv, "val", dir))
-                if not CHECK_FOLDER:
-                    os.makedirs(os.path.join(dir_path_ttv, "val", dir))
+                #TEST assignment and copy to test directory
+                for idx in test_index_list:
+                    path_file = list_path_mp4_files[idx]
+                    filename = path_file.split("/")[-1]
+                    dst_dir = os.path.join(dir_path_ttv, "test", dir, filename)
 
-                #print("Copia immagine da '{}' a {} ".format(src_dir, dst_dir))
-                shutil.copy2(path_file, dst_dir)
-            print("Number of files into dir '{}': {}".format(os.path.join(dir_path_ttv, "val", dir), len(os.listdir(os.path.join(dir_path_ttv, "val", dir)))))
+                    CHECK_FOLDER = os.path.isdir(os.path.join(dir_path_ttv, "test", dir))
+                    if not CHECK_FOLDER:
+                        os.makedirs(os.path.join(dir_path_ttv, "test", dir))
 
-            print('----------------------------------------------------------------')
+                    #print("Copia immagine da '{}' a {} ".format(src_dir, dst_dir))
+                    shutil.copy2(path_file, dst_dir)
+                print("Number of files into dir '{}': {}".format(os.path.join(dir_path_ttv, "test", dir),len(os.listdir(os.path.join(dir_path_ttv, "test", dir)))))
+
+                #VAL assignment and copy to val directory
+                for idx in val_index_list:
+                    path_file = list_path_mp4_files[idx]
+                    filename = path_file.split("/")[-1]
+                    dst_dir = os.path.join(dir_path_ttv, "val", dir, filename)
+
+                    CHECK_FOLDER = os.path.isdir(os.path.join(dir_path_ttv, "val", dir))
+                    if not CHECK_FOLDER:
+                        os.makedirs(os.path.join(dir_path_ttv, "val", dir))
+
+                    #print("Copia immagine da '{}' a {} ".format(src_dir, dst_dir))
+                    shutil.copy2(path_file, dst_dir)
+                print("Number of files into dir '{}': {}".format(os.path.join(dir_path_ttv, "val", dir), len(os.listdir(os.path.join(dir_path_ttv, "val", dir)))))
+
+                print('----------------------------------------------------------------')
 
 
 def create_dict_class2label(dir_path_augmented):
@@ -406,13 +428,13 @@ if __name__ == "__main__":
     print("****************************************************")
     print("****************************************************")
 
-    # 2) Split the dataset into train, test and val subdir
+    # 2) Split the dataset into train, test and val and anomaly subdir
     make_train_test_val_division(dir_dataset_grouped_mp4, dir_dataset_grouped_ttv_mp4)
 
     print("****************************************************")
     print("****************************************************")
 
-    # 3) Perform video data augmentation only on train set
+    # 3) Perform video data augmentation
     print("Data augmentation for train set")
     make_data_augmentation(dir_dataset_grouped_ttv_mp4, dir_dataset_grouped_augmented_ttv_mp4, "train", final_number=NUMBER_VIDEO_TRAIN)
     print("Data augmentation for val set")

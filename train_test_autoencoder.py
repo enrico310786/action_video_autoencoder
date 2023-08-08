@@ -140,6 +140,12 @@ def calculate_errors_and_distributions(device,
                             'LATENT_DISTANCE': latent_dist,
                             'EMBEDDING_DISTANCE': emb_dist}, ignore_index=True)
 
+        print("")
+        desc = df['ERROR'].describe()
+        print("ERROR distrbution for dataset {}: ".format(type_dataset))
+        print(desc)
+        print("")
+
         print("Save the errors and dist distribution dataset at: ", os.path.join(path_save, type_dataset + "_errors_dist_distribution.csv"))
         df.to_csv(os.path.join(path_save, type_dataset + "_errors_dist_distribution.csv"), index=False)
 
@@ -210,7 +216,6 @@ def train_model(cfg,
                 best_val_epoch_loss,
                 checkpoint_dir,
                 saving_dir_experiments,
-                period_eval,
                 epoch_start_unfreeze=None,
                 layer_start_unfreeze=None,
                 aws_bucket=None,
@@ -382,7 +387,6 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
     lr_factor = model_cfg.get("lr_factor", None)
     T_max = model_cfg.get("T_max", None)
     eta_min = model_cfg.get("eta_min", None)
-    period_eval = model_cfg['period_eval']
 
     # load ans shuffle csv dataset
     df_dataset_train = pd.read_csv(path_dataset_train_csv)
@@ -495,7 +499,6 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                     best_val_epoch_loss=best_val_epoch_loss,
                     checkpoint_dir=checkpoint_dir,
                     saving_dir_experiments=saving_dir_experiments,
-                    period_eval=period_eval,
                     epoch_start_unfreeze=epoch_start_unfreeze,
                     layer_start_unfreeze=layer_start_unfreeze,
                     scheduler_type=scheduler_type,

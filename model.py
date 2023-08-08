@@ -19,12 +19,14 @@ class Encoder(nn.Module):
             self.layer_3 = nn.Linear(dim_autoencoder_layers[1], dim_autoencoder_layers[2])
         self.dropout = nn.Dropout(dropout)
         self.relu = nn.ReLU()
+        self.batchNorm1 = nn.BatchNorm1d(init_dim)
 
     def forward(self, x):
-        x = x.float()
+        #x = x.float()
         # normalize the input tensor between 0 and 1 before to pass it through the encoder
-        x -= x.min(1, keepdim=True)[0]
-        x /= x.max(1, keepdim=True)[0]
+        #x -= x.min(1, keepdim=True)[0]
+        #x /= x.max(1, keepdim=True)[0]
+        x = self.batchNorm1(x)
         x = self.layer_1(x)
         x = self.relu(x)
         x = self.dropout(x)
@@ -49,7 +51,7 @@ class Decoder(nn.Module):
         self.layer_1 = nn.Linear(dim_autoencoder_layers[0], self.init_dim)
         self.dropout = nn.Dropout(dropout)
         self.relu = nn.ReLU()
-        self.sigmoid = nn.Sigmoid()
+        #self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         if self.num_autoencoder_layers == 3:
@@ -60,7 +62,7 @@ class Decoder(nn.Module):
         x = self.relu(x)
         x = self.dropout(x)
         x = self.layer_1(x)
-        x = self.sigmoid(x)
+        #x = self.sigmoid(x)
 
         return x
 
