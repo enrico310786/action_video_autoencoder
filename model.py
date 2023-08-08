@@ -31,11 +31,60 @@ class Encoder(nn.Module):
         x = self.relu(x)
         x = self.dropout(x)
         x = self.layer_2(x)
+        x = self.relu(x)
         if self.num_autoencoder_layers == 3:
-            x = self.relu(x)
             x = self.dropout(x)
             x = self.layer_3(x)
+            x = self.relu(x)
         return x
+
+
+class VariationalEncoder(nn.Module):
+    def __init__(self,  init_dim, num_autoencoder_layers, dim_autoencoder_layers, dropout):
+        super(VariationalEncoder, self).__init__()
+        self.init_dim = init_dim
+        self.num_autoencoder_layers = num_autoencoder_layers
+        self.dim_autoencoder_layers = dim_autoencoder_layers
+        self.layer_1 = nn.Linear(self.init_dim, dim_autoencoder_layers[0])
+        self.layer_2 = nn.Linear(dim_autoencoder_layers[0], dim_autoencoder_layers[1])
+        self.layer_2_bis = nn.Linear(dim_autoencoder_layers[0], dim_autoencoder_layers[1])
+        self.layer_3 = None
+        self.layer_3_bis = None
+        if num_autoencoder_layers == 3:
+            self.layer_3 = nn.Linear(dim_autoencoder_layers[1], dim_autoencoder_layers[2])
+            self.layer_3_bis = nn.Linear(dim_autoencoder_layers[1], dim_autoencoder_layers[2])
+        self.dropout = nn.Dropout(dropout)
+        self.relu = nn.ReLU()
+        self.batchNorm1 = nn.BatchNorm1d(init_dim)
+
+        #self.N = torch.distributions.Normal(0, 1)
+        #self.N.loc = self.N.loc.cuda() # hack to get sampling on the GPU
+        #self.N.scale = self.N.scale.cuda()
+
+        self.N = torch.distributions.Normal(torch.tensor(0).to(device=torch.device("cuda")), torch.tensor(1).to(device=torch.device("cuda")))
+        self.kl = 0
+
+    def forward(self, x):
+        x = self.batchNorm1(x)
+        x = self.layer_1(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.layer_2(x)
+        x = self.relu(x)
+        if self.num_autoencoder_layers == 3:
+            x = self.dropout(x)
+            x = self.layer_3(x)
+            x = self.relu(x)
+
+        mu = x
+        if self.num_autoencoder_layers == 3:
+            sigma = torch.exp(self.layer_3_bis(x))
+        else:
+            sigma = torch.exp(self.layer_2_bis(x))
+
+        z = mu + sigma*self.N.sample(mu.shape)
+        self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
+        return z
 
 
 class Decoder(nn.Module):
@@ -147,6 +196,43 @@ class TimeAutoencoder(nn.Module):
         x = self.base_model(x)
         x = self.encoder(x)
         x = self.decoder(x)
+        return x
+
+
+class TimeVariationalAutoencoder(nn.Module):
+    def __init__(self,  model_config):
+        super().__init__()
+        self.init_dim = model_config['init_dim']
+        self.name_time_model = model_config['name_time_model']
+        self.freeze_layers = model_config.get("freeze_layers", 1.0) > 0.0
+        self.num_autoencoder_layers = model_config['num_autoencoder_layers']
+        dim_autoencoder_layers = model_config['dim_autoencoder_layers'].split(",")
+        self.dim_autoencoder_layers = [int(i) for i in dim_autoencoder_layers]
+        self.dropout = model_config['dropout']
+        self.base_model = None
+
+        if self.name_time_model == "timesformer":
+            self.base_model = TimeSformer()
+        elif self.name_time_model == "r2plus1d_18":
+            self.base_model = R2plus1d_18()
+        elif self.name_time_model == "r3d":
+            self.base_model = R3D()
+
+        if self.freeze_layers:
+            print("Freeze layers of base model")
+            self.freeze_layers_base_model()
+
+        self.variational_encoder = VariationalEncoder(self.init_dim, self.num_autoencoder_layers, self.dim_autoencoder_layers, self.dropout)
+        self.decoder = Decoder(self.init_dim, self.num_autoencoder_layers, self.dim_autoencoder_layers, self.dropout)
+
+    def freeze_layers_base_model(self):
+        for name, param in self.base_model.named_parameters():
+            param.requires_grad = False
+
+    def forward(self, x):
+        x = self.base_model(x)
+        z = self.variational_encoder(x)
+        x = self.decoder(z)
         return x
 
 
