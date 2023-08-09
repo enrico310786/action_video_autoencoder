@@ -181,9 +181,6 @@ def calculate_errors_and_distributions(device,
             f.write('latent_centroid_4: {}\n\n'.format(latent_centroids[4]))
             f.write('latent_centroid_5: {}\n\n'.format(latent_centroids[5]))
             f.write('latent_centroid_6: {}\n\n'.format(latent_centroids[6]))
-            f.write('latent_centroid_7: {}\n\n'.format(latent_centroids[7]))
-            f.write('latent_centroid_8: {}\n\n'.format(latent_centroids[8]))
-            f.write('latent_centroid_9: {}\n\n'.format(latent_centroids[9]))
             f.write('\n\n')
             f.write('Embedding centroids')
             f.write('\n\n')
@@ -194,9 +191,6 @@ def calculate_errors_and_distributions(device,
             f.write('embedding_centroid_4: {}\n\n'.format(embedding_centroids[4]))
             f.write('embedding_centroid_5: {}\n\n'.format(embedding_centroids[5]))
             f.write('embedding_centroid_6: {}\n\n'.format(embedding_centroids[6]))
-            f.write('embedding_centroid_7: {}\n\n'.format(embedding_centroids[7]))
-            f.write('embedding_centroid_8: {}\n\n'.format(embedding_centroids[8]))
-            f.write('embedding_centroid_9: {}\n\n'.format(embedding_centroids[9]))
 
             f.close()
 
