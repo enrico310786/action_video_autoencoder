@@ -112,8 +112,8 @@ def calculate_errors_and_distributions(device,
             for idx in label2class.keys():
                 filter_idxs = np.where(class_labels == idx)[0]
                 #print("filter_idxs: ", filter_idxs)
-                latents_array_filtered = np.take(latents_array, filter_idxs, 0)
-                centroid = np.mean(latents_array_filtered, axis=0)
+                embeddings_array_filtered = np.take(embeddings_array, filter_idxs, 0)
+                centroid = np.mean(embeddings_array_filtered, axis=0)
                 embedding_centroids.append(centroid)
         embedding_centroids = np.array(embedding_centroids)
 
@@ -122,8 +122,8 @@ def calculate_errors_and_distributions(device,
             for idx in label2class.keys():
                 filter_idxs = np.where(class_labels == idx)[0]
                 #print("filter_idxs: ", filter_idxs)
-                embeddings_array_filtered = np.take(embeddings_array, filter_idxs, 0)
-                centroid = np.mean(embeddings_array_filtered, axis=0)
+                latents_array_filtered = np.take(latents_array, filter_idxs, 0)
+                centroid = np.mean(latents_array_filtered, axis=0)
                 latent_centroids.append(centroid)
         latent_centroids = np.array(latent_centroids)
 
