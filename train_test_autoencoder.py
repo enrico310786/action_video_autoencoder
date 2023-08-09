@@ -129,7 +129,8 @@ def calculate_errors_and_distributions(device,
 
         # iter over the array to find error and distances from the correspondig centroid. The centroid is found using the label of the class
         for label, emb, rec_emb, latent in zip(class_labels, embeddings_array, reconstructed_embeddings_array, latents_array):
-            error = (np.square(emb - rec_emb)).mean()
+            #error = (np.square(emb - rec_emb)).mean()
+            error = (np.square(emb - rec_emb)).sum()
             latent_dist = np.linalg.norm(latent - latent_centroids[label])
             emb_dist = np.linalg.norm(emb - embedding_centroids[label])
             category = label2class[label]
@@ -218,7 +219,6 @@ def train_model(cfg,
 
     train_losses = []
     val_losses = []
-    number_of_classes = cfg["data"]["number_of_classes"]
 
     print("Start training")
     freezed = True
@@ -466,7 +466,8 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                              eta_min=eta_min)
 
         # set the loss
-        criterion = nn.MSELoss()
+        #criterion = nn.MSELoss()
+        criterion = nn.MSELoss(reduction='sum')
 
         if checkpoint is not None:
             print('Load the optimizer from the last checkpoint')

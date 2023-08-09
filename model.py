@@ -100,6 +100,7 @@ class Decoder(nn.Module):
         self.layer_1 = nn.Linear(dim_autoencoder_layers[0], self.init_dim)
         self.dropout = nn.Dropout(dropout)
         self.relu = nn.ReLU()
+        #self.batchNorm1 = nn.BatchNorm1d(dim_autoencoder_layers[1])
         #self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
@@ -107,6 +108,7 @@ class Decoder(nn.Module):
             x = self.layer_3(x)
             x = self.relu(x)
             x = self.dropout(x)
+        #x = self.batchNorm1(x)
         x = self.layer_2(x)
         x = self.relu(x)
         x = self.dropout(x)
