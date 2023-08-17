@@ -83,21 +83,21 @@ def calculate_errors_and_distributions(device,
 
             # stack the results
             if latents_array is None:
-                latents_array = latents.detach().numpy()
+                latents_array = latents.detach().cpu().numpy()
             else:
-                latents_array = np.vstack((latents_array, latents.detach().numpy()))
+                latents_array = np.vstack((latents_array, latents.detach().cpu().numpy()))
 
             if embeddings_array is None:
-                embeddings_array = embeddings.detach().numpy()
+                embeddings_array = embeddings.detach().cpu().numpy()
             else:
-                embeddings_array = np.vstack((embeddings_array, embeddings.detach().numpy()))
+                embeddings_array = np.vstack((embeddings_array, embeddings.detach().cpu().numpy()))
 
             if reconstructed_embeddings_array is None:
-                reconstructed_embeddings_array = reconstructed_embeddings.detach().numpy()
+                reconstructed_embeddings_array = reconstructed_embeddings.detach().cpu().numpy()
             else:
-                reconstructed_embeddings_array = np.vstack((reconstructed_embeddings_array, reconstructed_embeddings.detach().numpy()))
+                reconstructed_embeddings_array = np.vstack((reconstructed_embeddings_array, reconstructed_embeddings.detach().cpu().numpy()))
 
-            class_labels.extend(labels.detach().numpy().tolist())
+            class_labels.extend(labels.detach().cpu().numpy().tolist())
 
         # transform to numpy array
         class_labels = np.array(class_labels)
