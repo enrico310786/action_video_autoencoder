@@ -77,9 +77,13 @@ if __name__ == '__main__':
     model = TimeAutoencoder(model_cfg)
     model.to(device)
 
-    print("")
+    print("**********************************************")
+    print("Model")
     print(model)
-    print("")
+    print("***********************************************")
+    print("Base Model")
+    print(model.base_model)
+    print("***********************************************")
 
     print("Check layers properties")
     for i, properties in enumerate(model.named_parameters()):
@@ -98,7 +102,7 @@ if __name__ == '__main__':
     print("************************************************************")
     print("************************************************************")
 
-    '''
+
     image_processor = AutoImageProcessor.from_pretrained("facebook/timesformer-base-finetuned-k400")
 
     mean = image_processor.image_mean
@@ -145,18 +149,18 @@ if __name__ == '__main__':
     print("After - inputs.size(): ", inputs.size())
 
     # forward pass
+    model.eval()
     outputs = model(inputs)
     print("outputs.size():", outputs.size())
     print("output: {}".format(outputs))
 
     target = model.base_model(inputs)
     print("target.size():", target.size())
+    print("target: {}".format(target))
 
     loss = nn.MSELoss()
     err = loss(outputs, target)
-    print("err", err)
+    print("err", err.item())
 
     latent = model.encoder(target)
     print("latent.size():", latent.size())
-
-    '''

@@ -83,21 +83,21 @@ def calculate_errors_and_distributions(device,
 
             # stack the results
             if latents_array is None:
-                latents_array = latents.detach().cpu().numpy()
+                latents_array = latents.detach().numpy()
             else:
-                latents_array = np.vstack((latents_array, latents.detach().cpu().numpy()))
+                latents_array = np.vstack((latents_array, latents.detach().numpy()))
 
             if embeddings_array is None:
-                embeddings_array = embeddings.detach().cpu().numpy()
+                embeddings_array = embeddings.detach().numpy()
             else:
-                embeddings_array = np.vstack((embeddings_array, embeddings.detach().cpu().numpy()))
+                embeddings_array = np.vstack((embeddings_array, embeddings.detach().numpy()))
 
             if reconstructed_embeddings_array is None:
-                reconstructed_embeddings_array = reconstructed_embeddings.detach().cpu().numpy()
+                reconstructed_embeddings_array = reconstructed_embeddings.detach().numpy()
             else:
-                reconstructed_embeddings_array = np.vstack((reconstructed_embeddings_array, reconstructed_embeddings.detach().cpu().numpy()))
+                reconstructed_embeddings_array = np.vstack((reconstructed_embeddings_array, reconstructed_embeddings.detach().numpy()))
 
-            class_labels.extend(labels.detach().cpu().numpy().tolist())
+            class_labels.extend(labels.detach().numpy().tolist())
 
         # transform to numpy array
         class_labels = np.array(class_labels)
@@ -157,7 +157,7 @@ def calculate_errors_and_distributions(device,
             tsne = TSNE(2)
             clustered = tsne.fit_transform(latents_array)
             fig = plt.figure(figsize=(12, 10))
-            cmap = plt.get_cmap('Spectral', 10)
+            cmap = plt.get_cmap('Spectral', 7)
             plt.scatter(*zip(*clustered), c=class_labels, cmap=cmap)
             plt.colorbar(drawedges=True)
             fig.savefig(os.path.join(path_save, "TSNE_latent_array_train.png"))
@@ -167,7 +167,7 @@ def calculate_errors_and_distributions(device,
             tsne = TSNE(2)
             clustered = tsne.fit_transform(embeddings_array)
             fig = plt.figure(figsize=(12, 10))
-            cmap = plt.get_cmap('Spectral', 10)
+            cmap = plt.get_cmap('Spectral', 7)
             plt.scatter(*zip(*clustered), c=class_labels, cmap=cmap)
             plt.colorbar(drawedges=True)
             fig.savefig(os.path.join(path_save, "TSNE_embedding_array_train.png"))
