@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from upload_s3 import multiup
 import random
 import wandb
+import seaborn as sns
 
 
 from model import TimeAutoencoder, find_last_checkpoint_file
@@ -45,8 +46,10 @@ def calculate_errors_and_distributions(device,
                                        model,
                                        dataloader,
                                        label2class,
+                                       df_distribution,
                                        type_dataset,
                                        path_save,
+                                       number_of_classes,
                                        embedding_centroids=None,
                                        latent_centroids=None):
     '''
@@ -58,7 +61,6 @@ def calculate_errors_and_distributions(device,
     6) Look the TSNE distribution of the train embedding arrays and of the train latent arrays
     '''
 
-    df = pd.DataFrame(columns=['CLASS', 'LABEL', 'ERROR', 'LATENT_DISTANCE', 'EMBEDDING_DISTANCE'])
 
     # centroids is the list of the centroids of each class calculated in the train set, both for latent arrays and embedding arrays
     if embedding_centroids is None:
@@ -135,20 +137,12 @@ def calculate_errors_and_distributions(device,
             emb_dist = np.linalg.norm(emb - embedding_centroids[label])
             category = label2class[label]
 
-            df = df.append({'CLASS': category,
-                            'LABEL': label,
-                            'ERROR': error,
-                            'LATENT_DISTANCE': latent_dist,
-                            'EMBEDDING_DISTANCE': emb_dist}, ignore_index=True)
-
-        print("")
-        desc = df['ERROR'].describe()
-        print("ERROR distrbution for dataset {}: ".format(type_dataset))
-        print(desc)
-        print("")
-
-        print("Save the errors and dist distribution dataset at: ", os.path.join(path_save, type_dataset + "_errors_dist_distribution.csv"))
-        df.to_csv(os.path.join(path_save, type_dataset + "_errors_dist_distribution.csv"), index=False)
+            df_distribution = df_distribution.append({'CLASS': category,
+                                                      'LABEL': label,
+                                                      'ERROR': error,
+                                                      'LATENT_DISTANCE': latent_dist,
+                                                      'EMBEDDING_DISTANCE': emb_dist,
+                                                      'TYPE_DATASET': type_dataset}, ignore_index=True)
 
         if type_dataset == "TRAIN":
 
@@ -157,7 +151,7 @@ def calculate_errors_and_distributions(device,
             tsne = TSNE(2)
             clustered = tsne.fit_transform(latents_array)
             fig = plt.figure(figsize=(12, 10))
-            cmap = plt.get_cmap('Spectral', 7)
+            cmap = plt.get_cmap('Spectral', number_of_classes)
             plt.scatter(*zip(*clustered), c=class_labels, cmap=cmap)
             plt.colorbar(drawedges=True)
             fig.savefig(os.path.join(path_save, "TSNE_latent_array_train.png"))
@@ -167,7 +161,7 @@ def calculate_errors_and_distributions(device,
             tsne = TSNE(2)
             clustered = tsne.fit_transform(embeddings_array)
             fig = plt.figure(figsize=(12, 10))
-            cmap = plt.get_cmap('Spectral', 7)
+            cmap = plt.get_cmap('Spectral', number_of_classes)
             plt.scatter(*zip(*clustered), c=class_labels, cmap=cmap)
             plt.colorbar(drawedges=True)
             fig.savefig(os.path.join(path_save, "TSNE_embedding_array_train.png"))
@@ -195,7 +189,7 @@ def calculate_errors_and_distributions(device,
 
             f.close()
 
-        return latent_centroids, embedding_centroids
+        return df_distribution, latent_centroids, embedding_centroids
 
 
 def train_model(cfg,
@@ -381,6 +375,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
     lr_factor = model_cfg.get("lr_factor", None)
     T_max = model_cfg.get("T_max", None)
     eta_min = model_cfg.get("eta_min", None)
+    number_of_classes = model_cfg['number_of_classes']
 
     # load ans shuffle csv dataset
     df_dataset_train = pd.read_csv(path_dataset_train_csv)
@@ -530,43 +525,75 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
         print("-------------------------------------------------------------------")
         print("-------------------------------------------------------------------")
 
+        # create dataset for distribution
+        df_distribution = pd.DataFrame(columns=['CLASS', 'LABEL', 'ERROR', 'LATENT_DISTANCE', 'EMBEDDING_DISTANCE', 'TYPE_DATASET'])
+
         # 12 - execute the inferences on the train, val and test set
         print("Inference on train dataset")
-        train_latent_centroids, train_embedding_centroids = calculate_errors_and_distributions(device,
-                                                                                               model,
-                                                                                               train_loader,
-                                                                                               label2class,
-                                                                                               type_dataset="TRAIN",
-                                                                                               path_save=checkpoint_dir,
-                                                                                               embedding_centroids=None,
-                                                                                               latent_centroids=None)
+        df_distribution, train_latent_centroids, train_embedding_centroids = calculate_errors_and_distributions(device,
+                                                                                                                model,
+                                                                                                                train_loader,
+                                                                                                                label2class,
+                                                                                                                number_of_classes=number_of_classes,
+                                                                                                                df_distribution=df_distribution,
+                                                                                                                type_dataset="TRAIN",
+                                                                                                                path_save=checkpoint_dir,
+                                                                                                                embedding_centroids=None,
+                                                                                                                latent_centroids=None)
 
         print("-------------------------------------------------------------------")
         print("-------------------------------------------------------------------")
 
         print("Inference on val dataset")
-        _, _ = calculate_errors_and_distributions(device,
-                                                  model,
-                                                  val_loader,
-                                                  label2class,
-                                                  type_dataset="VAL",
-                                                  path_save=checkpoint_dir,
-                                                  embedding_centroids=train_embedding_centroids,
-                                                  latent_centroids=train_latent_centroids)
+        df_distribution, _, _ = calculate_errors_and_distributions(device,
+                                                                   model,
+                                                                   val_loader,
+                                                                   label2class,
+                                                                   number_of_classes=number_of_classes,
+                                                                   df_distribution=df_distribution,
+                                                                   type_dataset="VAL",
+                                                                   path_save=checkpoint_dir,
+                                                                   embedding_centroids=train_embedding_centroids,
+                                                                   latent_centroids=train_latent_centroids)
 
         if test_loader is not None:
             print("-------------------------------------------------------------------")
             print("-------------------------------------------------------------------")
 
             print("Inference on test dataset")
-            _, _ = calculate_errors_and_distributions(device,
-                                                      model,
-                                                      test_loader,
-                                                      label2class,
-                                                      type_dataset="TEST",
-                                                      path_save=checkpoint_dir,
-                                                      embedding_centroids=train_embedding_centroids,
-                                                      latent_centroids=train_latent_centroids)
+            df_distribution, _, _ = calculate_errors_and_distributions(device,
+                                                                       model,
+                                                                       test_loader,
+                                                                       label2class,
+                                                                       number_of_classes=number_of_classes,
+                                                                       df_distribution=df_distribution,
+                                                                       type_dataset="TEST",
+                                                                       path_save=checkpoint_dir,
+                                                                       embedding_centroids=train_embedding_centroids,
+                                                                       latent_centroids=train_latent_centroids)
+
+        print("")
+        desc = df_distribution[df_distribution['TYPE_DATASET'] == 'TRAIN']['ERROR'].describe()
+        print("ERROR distrbution for dataset TRAIN: ")
+        print(desc)
+        desc = df_distribution[df_distribution['TYPE_DATASET'] == 'VAL']['ERROR'].describe()
+        print("ERROR distrbution for dataset VAL: ")
+        print(desc)
+        if test_loader is not None:
+            desc = df_distribution[df_distribution['TYPE_DATASET'] == 'TEST']['ERROR'].describe()
+            print("ERROR distrbution for dataset TEST: ")
+            print(desc)
+        print("")
+
+        # plotting in a one figure
+        print("Plot error distribution grouped by dataset")
+        plt.figure(figsize=(7, 7))
+        sns.boxplot(data=df_distribution, x="TYPE_DATASET", y="ERROR")
+        plt.yticks(rotation=90)
+        plt.savefig(os.path.join("dataset_error_distribution.png"))
+
+        print("Save the errors and dist distribution dataset at: ", os.path.join(checkpoint_dir,"errors_dist_distribution.csv"))
+        df_distribution.to_csv(os.path.join(checkpoint_dir, "errors_dist_distribution.csv"), index=False)
 
         if aws_bucket is not None and aws_directory is not None:
             print("Final upload on S3")
