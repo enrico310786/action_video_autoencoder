@@ -403,6 +403,10 @@ if __name__ == "__main__":
                         type=str,
                         default="/home/enrico/Dataset/ucf_sports_actions/ucf_action_grouped_augmented_ttv_mp4/df_test.csv",
                         help='Path where is saved the csv of the test dataset')
+    parser.add_argument('--path_dataset_anomaly_csv',
+                        type=str,
+                        default="/home/enrico/Dataset/ucf_sports_actions/ucf_action_grouped_augmented_ttv_mp4/df_anomaly.csv",
+                        help='Path where is saved the csv of the test dataset')
 
     opt = parser.parse_args()
 
@@ -413,6 +417,7 @@ if __name__ == "__main__":
     path_dataset_train_csv = opt.path_dataset_train_csv
     path_dataset_val_csv = opt.path_dataset_val_csv
     path_dataset_test_csv = opt.path_dataset_test_csv
+    path_dataset_anomaly_csv = opt.path_dataset_anomaly_csv
 
     # 0 -check directories
     # Check if exist the directory 'dir_dataset_grouped_mp4'. If exist I delete it and recreate it from new
@@ -505,3 +510,42 @@ if __name__ == "__main__":
     print("Min NUM_FRAMES test: ", df_test['NUM_FRAMES'].min())
     print("Max NUM_FRAMES val: ", df_val['NUM_FRAMES'].max())
     print("Min NUM_FRAMES val: ", df_val['NUM_FRAMES'].min())
+
+    print("-----------------------------------")
+
+    # 5) Copy anomaly dataset in the augmented directory and create the anomaly csv
+    print("Copy anomaly dataset in the augmented directory and create the anomaly csv")
+    dir_dataset_anomaly = os.path.join(dir_dataset_grouped_ttv_mp4, "anomaly")
+    dir_dataset_final_anomaly = os.path.join(dir_dataset_grouped_augmented_ttv_mp4, "anomaly")
+
+    CHECK_FOLDER = dir_dataset_final_anomaly
+    if not CHECK_FOLDER:
+        os.makedirs(dir_dataset_final_anomaly)
+
+    df_anomaly = pd.DataFrame(columns=['CLASS', 'LABEL', 'PATH', 'NUM_FRAMES', 'NUM_SEC', 'FPS'])
+
+    for subdir, dirs, files in os.walk(dir_dataset_anomaly):
+        for dir in dirs:
+            path_subdir = os.path.join(dir_dataset_anomaly, dir)
+            print("CLASS: {}".format(dir))
+            for file in os.listdir(path_subdir):
+                video_path = os.path.join(path_subdir, file)
+                filename = video_path.split("/")[-1]
+                relative_path = os.path.join("anomaly", dir, filename)
+                dst_dir = os.path.join(dir_dataset_final_anomaly, dir, filename)
+                CHECK_FOLDER = os.path.isdir(os.path.join(dir_dataset_final_anomaly, dir))
+                if not CHECK_FOLDER:
+                    os.makedirs(os.path.join(dir_dataset_final_anomaly, dir))
+                shutil.copy2(video_path, dst_dir)
+
+                # 2 - appendo il path nel dataframe
+                df_anomaly = df_anomaly.append({'CLASS': dir,
+                                                'LABEL': 42,
+                                                'PATH': relative_path,
+                                                'NUM_FRAMES': None,
+                                                'NUM_SEC': None,
+                                                'FPS': None}, ignore_index=True)
+
+    print("Create anomaly csv")
+    df_anomaly.to_csv(path_dataset_anomaly_csv, index=False)
+    print(df_anomaly.info())

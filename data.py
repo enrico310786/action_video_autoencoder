@@ -70,6 +70,7 @@ class ClassificationDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         video_path = os.path.join(self.dataset_path, self.df_dataset.iloc[idx]["PATH"])
         label = self.df_dataset.iloc[idx]["LABEL"]
+        class_name = self.df_dataset.iloc[idx]["CLASS"]
 
         video = EncodedVideo.from_path(video_path)
         start_time = 0
@@ -82,10 +83,10 @@ class ClassificationDataset(torch.utils.data.Dataset):
         if self.permute_color_frame:
             video_tensor = torch.permute(video_tensor, (1, 0, 2, 3))
 
-        return video_tensor, label
+        return video_tensor, label, class_name
 
 
-def create_loaders(df_dataset_train, df_dataset_val, df_dataset_test, data_cfg, dataset_path, batch_size):
+def create_loaders(df_dataset_train, df_dataset_val, df_dataset_test, df_dataset_anomaly, data_cfg, dataset_path, batch_size):
 
     # 1 - istanzio la classe dataset di train, val e test
     classification_dataset_train = ClassificationDataset(df_dataset=df_dataset_train,
@@ -100,6 +101,12 @@ def create_loaders(df_dataset_train, df_dataset_val, df_dataset_test, data_cfg, 
         classification_dataset_test = ClassificationDataset(df_dataset=df_dataset_test,
                                                             data_cfg=data_cfg,
                                                             dataset_path=dataset_path)
+
+    classification_dataset_anomaly = None
+    if df_dataset_test is not None:
+        classification_dataset_anomaly = ClassificationDataset(df_dataset=df_dataset_anomaly,
+                                                               data_cfg=data_cfg,
+                                                               dataset_path=dataset_path)
 
 
     # 2 - istanzio i dataloader
@@ -123,4 +130,12 @@ def create_loaders(df_dataset_train, df_dataset_val, df_dataset_test, data_cfg, 
                                                     num_workers=0,
                                                     drop_last=False)
 
-    return classification_dataloader_train, classification_dataloader_val, classification_dataloader_test
+    classification_dataloader_anomaly = None
+    if classification_dataset_anomaly is not None:
+        classification_dataloader_anomaly = DataLoader(dataset=classification_dataset_anomaly,
+                                                       batch_size=batch_size,
+                                                       shuffle=True,
+                                                       num_workers=0,
+                                                       drop_last=False)
+
+    return classification_dataloader_train, classification_dataloader_val, classification_dataloader_test, classification_dataloader_anomaly
