@@ -52,7 +52,7 @@ def load_video(video_path, permute_color_frame, transform):
     return video_tensor
 
 
-def evaluate_anomaly_accuracy_v2(path_datset, thershold_err, thershold_dist, file, embedding_centroids=None, invert_accuracy=False):
+def evaluate_anomaly_accuracy_v2(path_datset, thershold_err, thershold_dist, file_result, embedding_centroids=None, invert_accuracy=False):
 
     # 4 iter over the anomaly clips
     counter_anomaly_error = 0
@@ -115,39 +115,39 @@ def evaluate_anomaly_accuracy_v2(path_datset, thershold_err, thershold_dist, fil
                     else:
                         counter_non_anomaly_dist += 1
 
-        file.write('\n')
-        file.write('*************************************************************\n')
-        file.write("RESULT ANOMALY WITH RECONSTRUCTION ERROR\n")
-        file.write('*************************************************************\n')
+        file_result.write('\n')
+        file_result.write('*************************************************************\n')
+        file_result.write("RESULT ANOMALY WITH RECONSTRUCTION ERROR\n")
+        file_result.write('*************************************************************\n')
         total_clip = counter_anomaly_error + counter_non_anomaly_error
         anomaly_accuracy = counter_anomaly_error/total_clip
 
-        file.write("total_clip: {}\n".format(total_clip))
-        file.write("counter_anomaly_error: {}\n".format(counter_anomaly_error))
+        file_result.write("total_clip: {}\n".format(total_clip))
+        file_result.write("counter_anomaly_error: {}\n".format(counter_anomaly_error))
 
         if invert_accuracy:
-            file.write("non anomaly_accuracy: {}\n".format(1-anomaly_accuracy))
+            file_result.write("non anomaly_accuracy: {}\n".format(1-anomaly_accuracy))
         else:
-            file.write("anomaly_accuracy: {}\n".format(anomaly_accuracy))
+            file_result.write("anomaly_accuracy: {}\n".format(anomaly_accuracy))
 
-        file.write('\n')
+        file_result.write('\n')
 
-        file.write('*************************************************************\n')
-        file.write("RESULT ANOMALY WITH EMBEDDING DISTANCE\n")
-        file.write('*************************************************************\n')
+        file_result.write('*************************************************************\n')
+        file_result.write("RESULT ANOMALY WITH EMBEDDING DISTANCE\n")
+        file_result.write('*************************************************************\n')
 
         total_clip = counter_anomaly_dist + counter_non_anomaly_dist
         anomaly_accuracy = counter_anomaly_dist/total_clip
 
-        file.write("total_clip: {}\n".format(total_clip))
-        file.write("counter_anomaly_dist: {}\n".format(counter_anomaly_dist))
+        file_result.write("total_clip: {}\n".format(total_clip))
+        file_result.write("counter_anomaly_dist: {}\n".format(counter_anomaly_dist))
 
         if invert_accuracy:
-            file.write("non anomaly_accuracy: {}\n".format(1-anomaly_accuracy))
+            file_result.write("non anomaly_accuracy: {}\n".format(1-anomaly_accuracy))
         else:
-            file.write("anomaly_accuracy: {}\n".format(anomaly_accuracy))
+            file_result.write("anomaly_accuracy: {}\n".format(anomaly_accuracy))
 
-        return embedding_centroids
+        return embedding_centroids, file_result
 
 
 if __name__ == '__main__':
@@ -220,45 +220,45 @@ if __name__ == '__main__':
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_train_dir = os.path.join(path_dataset, 'train')
-        embedding_centroids = evaluate_anomaly_accuracy_v2(path_datset=path_train_dir,
-                                                           thershold_err=thershold_error,
-                                                           thershold_dist=thershold_dist,
-                                                           file=file,
-                                                           invert_accuracy=True)
+        embedding_centroids, file = evaluate_anomaly_accuracy_v2(path_datset=path_train_dir,
+                                                                 thershold_err=thershold_error,
+                                                                 thershold_dist=thershold_dist,
+                                                                 file_result=file,
+                                                                 invert_accuracy=True)
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         file.write("NON ANOMALY ACCURACY - VAL SET\n")
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_val_dir = os.path.join(path_dataset, 'val')
-        evaluate_anomaly_accuracy_v2(path_datset=path_val_dir,
-                                     thershold_err=thershold_error,
-                                     thershold_dist=thershold_dist,
-                                     embedding_centroids=embedding_centroids,
-                                     file=file,
-                                     invert_accuracy=True)
+        _, file = evaluate_anomaly_accuracy_v2(path_datset=path_val_dir,
+                                               thershold_err=thershold_error,
+                                               thershold_dist=thershold_dist,
+                                               embedding_centroids=embedding_centroids,
+                                               file_result=file,
+                                               invert_accuracy=True)
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         file.write("NON ANOMALY ACCURACY - TEST SET\n")
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_test_dir = os.path.join(path_dataset, 'test')
-        evaluate_anomaly_accuracy_v2(path_datset=path_test_dir,
-                                     thershold_err=thershold_error,
-                                     thershold_dist=thershold_dist,
-                                     embedding_centroids=embedding_centroids,
-                                     file=file,
-                                     invert_accuracy=True)
+        _, file = evaluate_anomaly_accuracy_v2(path_datset=path_test_dir,
+                                               thershold_err=thershold_error,
+                                               thershold_dist=thershold_dist,
+                                               embedding_centroids=embedding_centroids,
+                                               file_result=file,
+                                               invert_accuracy=True)
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         file.write("ANOMALY ACCURACY\n")
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_anomaly_dir = os.path.join(path_dataset, 'anomaly')
-        evaluate_anomaly_accuracy_v2(path_datset=path_anomaly_dir,
-                                     thershold_err=thershold_error,
-                                     thershold_dist=thershold_dist,
-                                     file=file,
-                                     embedding_centroids=embedding_centroids)
+        _, file = evaluate_anomaly_accuracy_v2(path_datset=path_anomaly_dir,
+                                               thershold_err=thershold_error,
+                                               thershold_dist=thershold_dist,
+                                               file_result=file,
+                                               embedding_centroids=embedding_centroids)
 
         file.close()
