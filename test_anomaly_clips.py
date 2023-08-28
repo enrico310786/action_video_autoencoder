@@ -156,9 +156,11 @@ if __name__ == '__main__':
     parser.add_argument('--path_config_file', type=str, help='Path of the config file to use')
     parser.add_argument('--thershold_error', type=str, help='Reconstructing error above the thershold gives an anomaly clip')
     parser.add_argument('--thershold_dist', type=str, help='Thershold distance between the array and one ov the train centroid')
+    parser.add_argument('--name_output_file', type=str, help='Name of the output file with the results')
     opt = parser.parse_args()
 
     path_config_file = opt.path_config_file
+    name_output_file = opt.name_output_file
     thershold_error = float(opt.thershold_error)
     thershold_dist = float(opt.thershold_dist)
 
@@ -204,7 +206,7 @@ if __name__ == '__main__':
     # 3 instantiate the loss function: MSE
     loss = nn.MSELoss(reduction='sum')
 
-    file = open(os.path.join(path_model, "result_test_anomaly.txt"), 'w')
+    file = open(os.path.join(path_model, name_output_file + ".txt"), 'w')
 
     with torch.no_grad():
         # 4 iter over the anomaly clips
