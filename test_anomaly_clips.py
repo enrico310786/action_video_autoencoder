@@ -109,7 +109,7 @@ def evaluate_anomaly_accuracy_v2(path_datset, thershold_err, thershold_dist, fil
                     # check the distance from the centroid: if for all the centroids is greater then the thershold distance then is an anomaly
                     centroid_emb_distances = []
                     for idx in range(len(embedding_centroids)):
-                        centroid_emb_distances.append(np.linalg.norm(emb - embedding_centroids[idx]))
+                        centroid_emb_distances.append(np.linalg.norm(emb.detach().cpu().numpy() - embedding_centroids[idx]))
                     if all(i >= thershold_dist for i in centroid_emb_distances):
                         counter_anomaly_dist += 1
                     else:
