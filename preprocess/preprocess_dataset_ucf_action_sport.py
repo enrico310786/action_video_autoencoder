@@ -1,7 +1,11 @@
 """
 The script navigates the dataset directory taking the .avi files
-Convert .avi files to .mp4 format
-Save the .mp4 files in a new directory with the same tree but containing only the .mp4 files
+1) Convert .avi files to .mp4 format
+2) Groups Golf-Swing-Back, Golf-Swing-Front and Golf-Swing-Side into Golf-Swing; groups Kicking-Front and Kicking-Side into Kicking
+3) Delete those .mp4 clips with duration less then 1 second
+4) Split train, test, val and anomaly
+5) Augment train and val
+6) For each final dataset train, val, test and anomaly creates the corresponding csv with label and path to the clips
 """
 
 import os
