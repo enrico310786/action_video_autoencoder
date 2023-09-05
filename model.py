@@ -164,6 +164,18 @@ class R3D(nn.Module):
         return x
 
 
+class R3D_slowfast(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.base_model = torch.hub.load("facebookresearch/pytorchvideo", "slowfast_r50", pretrained=True)
+        self.base_model.blocks[6].proj = Identity()
+
+    def forward(self, x):
+        x = self.base_model(x)
+        return x
+
+
 class TimeAutoencoder(nn.Module):
     def __init__(self,  model_config):
         super().__init__()
@@ -217,6 +229,8 @@ class TimeVariationalAutoencoder(nn.Module):
             self.base_model = TimeSformer()
         elif self.name_time_model == "r2plus1d_18":
             self.base_model = R2plus1d_18()
+        elif self.name_time_model == "slowfast_r50":
+            self.base_model = R3D_slowfast()
         elif self.name_time_model == "r3d":
             self.base_model = R3D()
 
