@@ -50,6 +50,7 @@ def calculate_errors_and_distributions(device,
                                        type_dataset,
                                        path_save,
                                        number_of_classes,
+                                       cfg,
                                        embedding_centroids=None,
                                        latent_centroids=None,
                                        df_anomaly_distances=None):
@@ -80,7 +81,10 @@ def calculate_errors_and_distributions(device,
     with torch.no_grad():
         # cycle on all batches
         for inputs, labels, classes in dataloader:
-            inputs = inputs.to(device)
+            if cfg['model']['name_time_model'] == "3d_slowfast":
+                inputs = [i.to(device) for i in inputs]
+            else:
+                inputs = inputs.to(device)
             labels = labels.to(device)
             classes = list(classes)
             embeddings = model.base_model(inputs)
@@ -284,14 +288,20 @@ def train_model(cfg,
 
         # cycle on all train batches of the current epoch by executing the train_batch function
         for inputs, _, _ in tqdm(train_loader, desc=f"epoch {str(epoch)} | train"):
-            inputs = inputs.to(device)
+            if cfg['model']['name_time_model'] == "3d_slowfast":
+                inputs = [i.to(device) for i in inputs]
+            else:
+                inputs = inputs.to(device)
             batch_loss = train_batch(inputs, model, optimizer, criterion)
             train_epoch_losses.append(batch_loss)
         train_epoch_loss = np.array(train_epoch_losses).mean()
 
         # cycle on all batches of val of the current epoch by calculating the accuracy and the loss function
         for inputs, _, _ in tqdm(val_loader, desc=f"epoch {str(epoch)} | val"):
-            inputs = inputs.to(device)
+            if cfg['model']['name_time_model'] == "3d_slowfast":
+                inputs = [i.to(device) for i in inputs]
+            else:
+                inputs = inputs.to(device)
             validation_loss = val_loss(inputs, model, criterion)
             val_epoch_losses.append(validation_loss)
         val_epoch_loss = np.mean(val_epoch_losses)
@@ -709,6 +719,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                                                                 train_loader,
                                                                                                                 label2class,
                                                                                                                 number_of_classes=number_of_classes,
+                                                                                                                cfg=cfg,
                                                                                                                 df_distribution=df_distribution,
                                                                                                                 type_dataset="TRAIN",
                                                                                                                 path_save=checkpoint_dir,
@@ -724,6 +735,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                    val_loader,
                                                                    label2class,
                                                                    number_of_classes=number_of_classes,
+                                                                   cfg=cfg,
                                                                    df_distribution=df_distribution,
                                                                    type_dataset="VAL",
                                                                    path_save=checkpoint_dir,
@@ -740,6 +752,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                        test_loader,
                                                                        label2class,
                                                                        number_of_classes=number_of_classes,
+                                                                       cfg=cfg,
                                                                        df_distribution=df_distribution,
                                                                        type_dataset="TEST",
                                                                        path_save=checkpoint_dir,
@@ -756,6 +769,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                                              anomaly_loader,
                                                                                              label2class,
                                                                                              number_of_classes=number_of_classes,
+                                                                                             cfg=cfg,
                                                                                              df_distribution=df_distribution,
                                                                                              type_dataset="ANOMALY",
                                                                                              path_save=checkpoint_dir,
