@@ -539,7 +539,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
     eta_min = model_cfg.get("eta_min", None)
     number_of_classes = model_cfg['number_of_classes']
     is_slowfast = False
-    if model_cfg.name_time_model == "3d_slowfast":
+    if model_cfg['name_time_model'] == "3d_slowfast":
         is_slowfast = True
         print("Set is_slowfast to True")
 
