@@ -293,7 +293,6 @@ def train_model(cfg,
 
         # cycle on all train batches of the current epoch by executing the train_batch function
         for inputs, _, _ in tqdm(train_loader, desc=f"epoch {str(epoch)} | train"):
-            print("len(inputs): ", len(inputs))
             if cfg['model']['name_time_model'] == "3d_slowfast":
                 inputs = [i.to(device) for i in inputs]
             else:
