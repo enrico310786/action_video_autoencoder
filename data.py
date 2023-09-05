@@ -22,15 +22,15 @@ from torchvision.transforms import (
 
 # for slow_fast check
 # https://pytorchvideo.org/docs/tutorial_torchhub_inference
-alpha = 4
 
 
 class PackPathway(torch.nn.Module):
     """
     Transform for converting video frames as a list of tensors.
     """
-    def __init__(self):
+    def __init__(self, alpha_slowfast):
         super().__init__()
+        self.alpha_slowfast = alpha_slowfast
 
     def forward(self, frames: torch.Tensor):
         fast_pathway = frames
@@ -39,7 +39,7 @@ class PackPathway(torch.nn.Module):
             frames,
             1,
             torch.linspace(
-                0, frames.shape[1] - 1, frames.shape[1] // alpha
+                0, frames.shape[1] - 1, frames.shape[1] // self.alpha_slowfast
             ).long(),
         )
         frame_list = [slow_pathway, fast_pathway]
@@ -62,6 +62,7 @@ class ClassificationDataset(torch.utils.data.Dataset):
         self.permute_color_frame = self.data_cfg.get("permute_color_frame", 1.0) > 0.0
         self.is_train = is_train
         self.is_slowfast = is_slowfast
+        self.alpha_slowfast = data_cfg.get("alpha_slowfast", None)
 
         if not self.is_slowfast:
             if is_train:
@@ -101,7 +102,7 @@ class ClassificationDataset(torch.utils.data.Dataset):
                             Normalize(self.mean, self.std),
                             RandomShortSideScale(min_size=self.min_size, max_size=self.max_size),
                             RandomCrop(self.resize_to),
-                            PackPathway()
+                            PackPathway(self.alpha_slowfast)
                         ]
                     ),
                 )
@@ -114,7 +115,7 @@ class ClassificationDataset(torch.utils.data.Dataset):
                             Lambda(lambda x: x / 255.0),
                             Normalize(self.mean, self.std),
                             Resize((self.resize_to, self.resize_to)),
-                            PackPathway()
+                            PackPathway(self.alpha_slowfast)
                         ]
                     ),
                 )

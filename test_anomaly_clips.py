@@ -23,15 +23,15 @@ from model import TimeAutoencoder, find_last_checkpoint_file
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("device: ", device)
-alpha = 4
 
 
 class PackPathway(torch.nn.Module):
     """
     Transform for converting video frames as a list of tensors.
     """
-    def __init__(self):
+    def __init__(self, alpha_slowfast):
         super().__init__()
+        self.alpha_slowfast = alpha_slowfast
 
     def forward(self, frames: torch.Tensor):
         fast_pathway = frames
@@ -40,7 +40,7 @@ class PackPathway(torch.nn.Module):
             frames,
             1,
             torch.linspace(
-                0, frames.shape[1] - 1, frames.shape[1] // alpha
+                0, frames.shape[1] - 1, frames.shape[1] // self.alpha_slowfast
             ).long(),
         )
         frame_list = [slow_pathway, fast_pathway]
@@ -216,6 +216,7 @@ if __name__ == '__main__':
     max_size = data_cfg["max_size"]
     resize_to = data_cfg["resize_to"]
     permute_color_frame = data_cfg.get("permute_color_frame", 1.0) > 0.0
+    alpha_slowfast = data_cfg.get("alpha_slowfast", None)
 
     path_dataset = dataset_cfg['dataset_path']
     path_model = os.path.join(model_cfg['saving_dir_experiments'], model_cfg['saving_dir_model'])
@@ -242,7 +243,7 @@ if __name__ == '__main__':
                     Lambda(lambda x: x / 255.0),
                     Normalize(mean, std),
                     Resize((resize_to, resize_to)),
-                    PackPathway()
+                    PackPathway(alpha_slowfast)
                 ]
             ),
         )
