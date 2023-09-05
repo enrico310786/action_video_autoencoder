@@ -20,8 +20,11 @@ from model import TimeAutoencoder, find_last_checkpoint_file
 
 def train_batch(inputs, model, optimizer, criterion):
     model.train()
-    target = model.base_model(inputs)
-    outputs = model(inputs)
+    target, outputs, latent = model(inputs)
+    #target = model.base_model(inputs)
+    print("target.size(): ", target.size())
+    print("outputs.size(): ", outputs.size())
+    #outputs = model(inputs)
     #print("target.size(): ", target.size())
     #print("outputs.size(): ", outputs.size())
     #print("type(target): ", type(target))
@@ -36,8 +39,9 @@ def train_batch(inputs, model, optimizer, criterion):
 @torch.no_grad()
 def val_loss(inputs, model, criterion):
     model.eval()
-    target = model.base_model(inputs)
-    outputs = model(inputs)
+    target, outputs, latent = model(inputs)
+    #target = model.base_model(inputs)
+    #outputs = model(inputs)
     val_loss = criterion(outputs, target)
     return val_loss.item()
 
@@ -87,9 +91,10 @@ def calculate_errors_and_distributions(device,
                 inputs = inputs.to(device)
             labels = labels.to(device)
             classes = list(classes)
-            embeddings = model.base_model(inputs)
-            reconstructed_embeddings = model(inputs)
-            latents = model.encoder(embeddings)
+            embeddings, reconstructed_embeddings, latents = model(inputs)
+            #embeddings = model.base_model(inputs)
+            #reconstructed_embeddings = model(inputs)
+            #latents = model.encoder(embeddings)
 
             # stack the results
             if latents_array is None:
@@ -288,10 +293,13 @@ def train_model(cfg,
 
         # cycle on all train batches of the current epoch by executing the train_batch function
         for inputs, _, _ in tqdm(train_loader, desc=f"epoch {str(epoch)} | train"):
+            print("len(inputs): ", len(inputs))
             if cfg['model']['name_time_model'] == "3d_slowfast":
                 inputs = [i.to(device) for i in inputs]
             else:
                 inputs = inputs.to(device)
+            print("inputs[0].size(): ", inputs[0].size())
+            print("inputs[1].size(): ", inputs[1].size())
             batch_loss = train_batch(inputs, model, optimizer, criterion)
             train_epoch_losses.append(batch_loss)
         train_epoch_loss = np.array(train_epoch_losses).mean()

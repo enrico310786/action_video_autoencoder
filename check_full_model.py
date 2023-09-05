@@ -150,17 +150,16 @@ if __name__ == '__main__':
 
     # forward pass
     model.eval()
-    outputs = model(inputs)
-    print("outputs.size():", outputs.size())
-    print("output: {}".format(outputs))
+    embedding, rec_embedding, latent = model(inputs)
+    print("embedding.size():", embedding.size())
+    print("embedding: {}".format(embedding))
 
-    target = model.base_model(inputs)
-    print("target.size():", target.size())
-    print("target: {}".format(target))
+    print("rec_embedding.size():", rec_embedding.size())
+    print("rec_embedding: {}".format(rec_embedding))
+
+    print("latent.size():", latent.size())
+    print("latent: {}".format(latent))
 
     loss = nn.MSELoss()
-    err = loss(outputs, target)
+    err = loss(rec_embedding, embedding)
     print("err", err.item())
-
-    latent = model.encoder(target)
-    print("latent.size():", latent.size())

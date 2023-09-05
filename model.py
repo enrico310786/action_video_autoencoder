@@ -209,10 +209,10 @@ class TimeAutoencoder(nn.Module):
             param.requires_grad = False
 
     def forward(self, x):
-        x = self.base_model(x)
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
+        embedding = self.base_model(x)
+        latent = self.encoder(embedding)
+        rec_embedding = self.decoder(latent)
+        return embedding, rec_embedding, latent
 
 
 class TimeVariationalAutoencoder(nn.Module):

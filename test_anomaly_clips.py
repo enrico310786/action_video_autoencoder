@@ -23,6 +23,29 @@ from model import TimeAutoencoder, find_last_checkpoint_file
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("device: ", device)
+alpha = 4
+
+
+class PackPathway(torch.nn.Module):
+    """
+    Transform for converting video frames as a list of tensors.
+    """
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, frames: torch.Tensor):
+        fast_pathway = frames
+        # Perform temporal sampling from the fast pathway.
+        slow_pathway = torch.index_select(
+            frames,
+            1,
+            torch.linspace(
+                0, frames.shape[1] - 1, frames.shape[1] // alpha
+            ).long(),
+        )
+        frame_list = [slow_pathway, fast_pathway]
+        return frame_list
+
 
 def load_config(path="configs/default.yaml") -> dict:
     """
@@ -52,7 +75,7 @@ def load_video(video_path, permute_color_frame, transform):
     return video_tensor
 
 
-def evaluate_anomaly_accuracy_v2(path_datset, thershold_err, thershold_dist, file_result, embedding_centroids=None, invert_accuracy=False):
+def evaluate_anomaly_accuracy_v2(model, transform, path_datset, thershold_err, thershold_dist, file_result, embedding_centroids=None, invert_accuracy=False, is_slowfast=False):
 
     # 4 iter over the anomaly clips
     counter_anomaly_error = 0
@@ -72,7 +95,13 @@ def evaluate_anomaly_accuracy_v2(path_datset, thershold_err, thershold_dist, fil
                     for file in os.listdir(path_subdir):
                         video_path = os.path.join(path_subdir, file)
                         tensor_video = load_video(video_path, permute_color_frame, transform)
-                        tensor_video = tensor_video[None].to(device)
+
+                        if is_slowfast:
+                            tensor_video = [i.to(device)[None, ...] for i in tensor_video]
+                        else:
+                            tensor_video = tensor_video[None].to(device)
+
+                        # calculate the embedding directly from the base model
                         emb = model.base_model(tensor_video)
                         if embeddings_array is None:
                             embeddings_array = emb.detach().cpu().numpy()
@@ -92,12 +121,17 @@ def evaluate_anomaly_accuracy_v2(path_datset, thershold_err, thershold_dist, fil
                 for file in os.listdir(path_subdir):
                     video_path = os.path.join(path_subdir, file)
                     tensor_video = load_video(video_path, permute_color_frame, transform)
-                    tensor_video = tensor_video[None].to(device)
+
+                    if is_slowfast:
+                        tensor_video = [i.to(device)[None, ...] for i in tensor_video]
+                    else:
+                        tensor_video = tensor_video[None].to(device)
 
                     # reconstructed embedding
-                    rec_emb = model(tensor_video)
+                    emb, rec_emb, _ = model(tensor_video)
+                    #rec_emb = model(tensor_video)
                     # embedding
-                    emb = model.base_model(tensor_video)
+                    #emb = model.base_model(tensor_video)
                     error = loss(emb, rec_emb).item()
 
                     # chech the reconstructing error
@@ -170,6 +204,10 @@ if __name__ == '__main__':
     model_cfg = cfg['model']
     data_cfg = cfg['data']
     dataset_cfg = cfg['dataset']
+    is_slowfast = False
+    if model_cfg['name_time_model'] == "3d_slowfast":
+        is_slowfast = True
+        print("Set is_slowfast to True")
 
     num_frames_to_sample = data_cfg["num_frames_to_sample"]
     mean = [float(i) for i in data_cfg["mean"]]
@@ -183,17 +221,31 @@ if __name__ == '__main__':
     path_model = os.path.join(model_cfg['saving_dir_experiments'], model_cfg['saving_dir_model'])
     path_checkpoint = os.path.join(path_model, 'best.pth')
 
-    transform = ApplyTransformToKey(
-        key="video",
-        transform=Compose(
-            [
-                UniformTemporalSubsample(num_frames_to_sample),
-                Lambda(lambda x: x / 255.0),
-                Normalize(mean, std),
-                Resize((resize_to, resize_to))
-            ]
-        ),
-    )
+    if not is_slowfast:
+        transform = ApplyTransformToKey(
+            key="video",
+            transform=Compose(
+                [
+                    UniformTemporalSubsample(num_frames_to_sample),
+                    Lambda(lambda x: x / 255.0),
+                    Normalize(mean, std),
+                    Resize((resize_to, resize_to))
+                ]
+            ),
+        )
+    else:
+        transform = ApplyTransformToKey(
+            key="video",
+            transform=Compose(
+                [
+                    UniformTemporalSubsample(num_frames_to_sample),
+                    Lambda(lambda x: x / 255.0),
+                    Normalize(mean, std),
+                    Resize((resize_to, resize_to)),
+                    PackPathway()
+                ]
+            ),
+        )
 
     # 2 - load model
     model = TimeAutoencoder(model_cfg)
@@ -220,45 +272,57 @@ if __name__ == '__main__':
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_train_dir = os.path.join(path_dataset, 'train')
-        embedding_centroids, file = evaluate_anomaly_accuracy_v2(path_datset=path_train_dir,
+        embedding_centroids, file = evaluate_anomaly_accuracy_v2(model=model,
+                                                                 transform=transform,
+                                                                 path_datset=path_train_dir,
                                                                  thershold_err=thershold_error,
                                                                  thershold_dist=thershold_dist,
                                                                  file_result=file,
-                                                                 invert_accuracy=True)
+                                                                 invert_accuracy=True,
+                                                                 is_slowfast=is_slowfast)
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         file.write("NON ANOMALY ACCURACY - VAL SET\n")
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_val_dir = os.path.join(path_dataset, 'val')
-        _, file = evaluate_anomaly_accuracy_v2(path_datset=path_val_dir,
+        _, file = evaluate_anomaly_accuracy_v2(model=model,
+                                               transform=transform,
+                                               path_datset=path_val_dir,
                                                thershold_err=thershold_error,
                                                thershold_dist=thershold_dist,
                                                embedding_centroids=embedding_centroids,
                                                file_result=file,
-                                               invert_accuracy=True)
+                                               invert_accuracy=True,
+                                               is_slowfast=is_slowfast)
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         file.write("NON ANOMALY ACCURACY - TEST SET\n")
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_test_dir = os.path.join(path_dataset, 'test')
-        _, file = evaluate_anomaly_accuracy_v2(path_datset=path_test_dir,
+        _, file = evaluate_anomaly_accuracy_v2(model=model,
+                                               transform=transform,
+                                               path_datset=path_test_dir,
                                                thershold_err=thershold_error,
                                                thershold_dist=thershold_dist,
                                                embedding_centroids=embedding_centroids,
                                                file_result=file,
-                                               invert_accuracy=True)
+                                               invert_accuracy=True,
+                                               is_slowfast=is_slowfast)
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         file.write("ANOMALY ACCURACY\n")
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_anomaly_dir = os.path.join(path_dataset, 'anomaly')
-        _, file = evaluate_anomaly_accuracy_v2(path_datset=path_anomaly_dir,
+        _, file = evaluate_anomaly_accuracy_v2(model=model,
+                                               transform=transform,
+                                               path_datset=path_anomaly_dir,
                                                thershold_err=thershold_error,
                                                thershold_dist=thershold_dist,
                                                file_result=file,
-                                               embedding_centroids=embedding_centroids)
+                                               embedding_centroids=embedding_centroids,
+                                               is_slowfast=is_slowfast)
 
         file.close()
