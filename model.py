@@ -192,7 +192,7 @@ class TimeAutoencoder(nn.Module):
             self.base_model = TimeSformer()
         elif self.name_time_model == "r2plus1d_18":
             self.base_model = R2plus1d_18()
-        elif self.name_time_model == "slowfast_r50":
+        elif self.name_time_model == "3d_slowfast":
             self.base_model = R3D_slowfast()
         elif self.name_time_model == "r3d":
             self.base_model = R3D()
@@ -231,7 +231,7 @@ class TimeVariationalAutoencoder(nn.Module):
             self.base_model = TimeSformer()
         elif self.name_time_model == "r2plus1d_18":
             self.base_model = R2plus1d_18()
-        elif self.name_time_model == "slowfast_r50":
+        elif self.name_time_model == "3d_slowfast":
             self.base_model = R3D_slowfast()
         elif self.name_time_model == "r3d":
             self.base_model = R3D()
