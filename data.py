@@ -20,9 +20,34 @@ from torchvision.transforms import (
     Resize
 )
 
+# for slow_fast check
+# https://pytorchvideo.org/docs/tutorial_torchhub_inference
+alpha = 4
+
+
+class PackPathway(torch.nn.Module):
+    """
+    Transform for converting video frames as a list of tensors.
+    """
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, frames: torch.Tensor):
+        fast_pathway = frames
+        # Perform temporal sampling from the fast pathway.
+        slow_pathway = torch.index_select(
+            frames,
+            1,
+            torch.linspace(
+                0, frames.shape[1] - 1, frames.shape[1] // alpha
+            ).long(),
+        )
+        frame_list = [slow_pathway, fast_pathway]
+        return frame_list
+
 
 class ClassificationDataset(torch.utils.data.Dataset):
-    def __init__(self, df_dataset, data_cfg, dataset_path, is_train=False) -> None:
+    def __init__(self, df_dataset, data_cfg, dataset_path, is_train=False, is_slowfast=False) -> None:
         super().__init__()
 
         self.df_dataset = df_dataset
@@ -36,33 +61,63 @@ class ClassificationDataset(torch.utils.data.Dataset):
         self.resize_to = self.data_cfg["resize_to"]
         self.permute_color_frame = self.data_cfg.get("permute_color_frame", 1.0) > 0.0
         self.is_train = is_train
+        self.is_slowfast = is_slowfast
 
-        if is_train:
-            self.transform = ApplyTransformToKey(
-                key="video",
-                transform=Compose(
-                    [
-                        UniformTemporalSubsample(self.num_frames_to_sample),
-                        Lambda(lambda x: x / 255.0),
-                        Normalize(self.mean, self.std),
-                        RandomShortSideScale(min_size=self.min_size, max_size=self.max_size),
-                        RandomCrop(self.resize_to),
-                        #RandomHorizontalFlip(p=0.5),
-                    ]
-                ),
-            )
+        if not self.is_slowfast:
+            if is_train:
+                self.transform = ApplyTransformToKey(
+                    key="video",
+                    transform=Compose(
+                        [
+                            UniformTemporalSubsample(self.num_frames_to_sample),
+                            Lambda(lambda x: x / 255.0),
+                            Normalize(self.mean, self.std),
+                            RandomShortSideScale(min_size=self.min_size, max_size=self.max_size),
+                            RandomCrop(self.resize_to),
+                            #RandomHorizontalFlip(p=0.5),
+                        ]
+                    ),
+                )
+            else:
+                self.transform = ApplyTransformToKey(
+                    key="video",
+                    transform=Compose(
+                        [
+                            UniformTemporalSubsample(self.num_frames_to_sample),
+                            Lambda(lambda x: x / 255.0),
+                            Normalize(self.mean, self.std),
+                            Resize((self.resize_to, self.resize_to))
+                        ]
+                    ),
+                )
         else:
-            self.transform = ApplyTransformToKey(
-                key="video",
-                transform=Compose(
-                    [
-                        UniformTemporalSubsample(self.num_frames_to_sample),
-                        Lambda(lambda x: x / 255.0),
-                        Normalize(self.mean, self.std),
-                        Resize((self.resize_to, self.resize_to))
-                    ]
-                ),
-            )
+            if is_train:
+                self.transform = ApplyTransformToKey(
+                    key="video",
+                    transform=Compose(
+                        [
+                            UniformTemporalSubsample(self.num_frames_to_sample),
+                            Lambda(lambda x: x / 255.0),
+                            Normalize(self.mean, self.std),
+                            RandomShortSideScale(min_size=self.min_size, max_size=self.max_size),
+                            RandomCrop(self.resize_to),
+                            PackPathway()
+                        ]
+                    ),
+                )
+            else:
+                self.transform = ApplyTransformToKey(
+                    key="video",
+                    transform=Compose(
+                        [
+                            UniformTemporalSubsample(self.num_frames_to_sample),
+                            Lambda(lambda x: x / 255.0),
+                            Normalize(self.mean, self.std),
+                            Resize((self.resize_to, self.resize_to)),
+                            PackPathway()
+                        ]
+                    ),
+                )
 
     def __len__(self):
         return len(self.df_dataset)
@@ -86,27 +141,31 @@ class ClassificationDataset(torch.utils.data.Dataset):
         return video_tensor, label, class_name
 
 
-def create_loaders(df_dataset_train, df_dataset_val, df_dataset_test, df_dataset_anomaly, data_cfg, dataset_path, batch_size):
+def create_loaders(df_dataset_train, df_dataset_val, df_dataset_test, df_dataset_anomaly, data_cfg, dataset_path, batch_size, is_slowfast=False):
 
     # 1 - istanzio la classe dataset di train, val e test
     classification_dataset_train = ClassificationDataset(df_dataset=df_dataset_train,
                                                          data_cfg=data_cfg,
                                                          dataset_path=dataset_path,
-                                                         is_train=True)
+                                                         is_train=True,
+                                                         is_slowfast=is_slowfast)
     classification_dataset_val = ClassificationDataset(df_dataset=df_dataset_val,
                                                        data_cfg=data_cfg,
-                                                       dataset_path=dataset_path)
+                                                       dataset_path=dataset_path,
+                                                       is_slowfast=is_slowfast)
     classification_dataset_test = None
     if df_dataset_test is not None:
         classification_dataset_test = ClassificationDataset(df_dataset=df_dataset_test,
                                                             data_cfg=data_cfg,
-                                                            dataset_path=dataset_path)
+                                                            dataset_path=dataset_path,
+                                                            is_slowfast=is_slowfast)
 
     classification_dataset_anomaly = None
     if df_dataset_test is not None:
         classification_dataset_anomaly = ClassificationDataset(df_dataset=df_dataset_anomaly,
                                                                data_cfg=data_cfg,
-                                                               dataset_path=dataset_path)
+                                                               dataset_path=dataset_path,
+                                                               is_slowfast=is_slowfast)
 
 
     # 2 - istanzio i dataloader

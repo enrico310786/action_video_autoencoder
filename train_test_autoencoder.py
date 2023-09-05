@@ -538,6 +538,10 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
     T_max = model_cfg.get("T_max", None)
     eta_min = model_cfg.get("eta_min", None)
     number_of_classes = model_cfg['number_of_classes']
+    is_slowfast = False
+    if model_cfg.name_time_model == "3d_slowfast":
+        is_slowfast = True
+        print("Set is_slowfast to True")
 
     # load ans shuffle csv dataset
     df_dataset_train = pd.read_csv(path_dataset_train_csv)
@@ -576,7 +580,8 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                            df_dataset_anomaly=df_dataset_anomaly,
                                                                            data_cfg=cfg["data"],
                                                                            dataset_path=dataset_path,
-                                                                           batch_size=batch_size)
+                                                                           batch_size=batch_size,
+                                                                           is_slowfast=is_slowfast)
 
     # set the device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
