@@ -13,7 +13,7 @@ from upload_s3 import multiup
 import random
 import wandb
 import seaborn as sns
-
+import gc
 
 from model import TimeAutoencoder, find_last_checkpoint_file
 
@@ -301,6 +301,7 @@ def train_model(cfg,
             #print("inputs[1].size(): ", inputs[1].size())
             batch_loss = train_batch(inputs, model, optimizer, criterion)
             train_epoch_losses.append(batch_loss)
+            torch.cuda.empty_cache()
         train_epoch_loss = np.array(train_epoch_losses).mean()
 
         # cycle on all batches of val of the current epoch by calculating the accuracy and the loss function
@@ -311,6 +312,7 @@ def train_model(cfg,
                 inputs = inputs.to(device)
             validation_loss = val_loss(inputs, model, criterion)
             val_epoch_losses.append(validation_loss)
+            torch.cuda.empty_cache()
         val_epoch_loss = np.mean(val_epoch_losses)
 
         wandb.log({'Learning Rate': optimizer.param_groups[0]['lr'],
@@ -364,6 +366,7 @@ def train_model(cfg,
             multiup(aws_bucket, aws_directory, saving_dir_experiments)
 
         torch.cuda.empty_cache()
+        gc.collect()
         print("---------------------------------------------------------")
 
     print("End training")
