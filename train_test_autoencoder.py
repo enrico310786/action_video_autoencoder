@@ -22,8 +22,8 @@ def train_batch(inputs, model, optimizer, criterion):
     model.train()
     target, outputs, latent = model(inputs)
     #target = model.base_model(inputs)
-    print("target.size(): ", target.size())
-    print("outputs.size(): ", outputs.size())
+    #print("target.size(): ", target.size())
+    #print("outputs.size(): ", outputs.size())
     #outputs = model(inputs)
     #print("target.size(): ", target.size())
     #print("outputs.size(): ", outputs.size())
@@ -298,8 +298,8 @@ def train_model(cfg,
                 inputs = [i.to(device) for i in inputs]
             else:
                 inputs = inputs.to(device)
-            print("inputs[0].size(): ", inputs[0].size())
-            print("inputs[1].size(): ", inputs[1].size())
+            #print("inputs[0].size(): ", inputs[0].size())
+            #print("inputs[1].size(): ", inputs[1].size())
             batch_loss = train_batch(inputs, model, optimizer, criterion)
             train_epoch_losses.append(batch_loss)
         train_epoch_loss = np.array(train_epoch_losses).mean()
