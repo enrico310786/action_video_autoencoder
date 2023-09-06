@@ -176,7 +176,7 @@ class R3D_slowfast(nn.Module):
         return x
 
 
-class TimeAutoencoder(nn.Module):
+class SpaceTimeAutoencoder(nn.Module):
     def __init__(self,  model_config):
         super().__init__()
         self.init_dim = model_config['init_dim']

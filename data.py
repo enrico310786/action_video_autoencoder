@@ -46,7 +46,7 @@ class PackPathway(torch.nn.Module):
         return frame_list
 
 
-class ClassificationDataset(torch.utils.data.Dataset):
+class Dataset(torch.utils.data.Dataset):
     def __init__(self, df_dataset, data_cfg, dataset_path, is_train=False, is_slowfast=False) -> None:
         super().__init__()
 
@@ -145,28 +145,28 @@ class ClassificationDataset(torch.utils.data.Dataset):
 def create_loaders(df_dataset_train, df_dataset_val, df_dataset_test, df_dataset_anomaly, data_cfg, dataset_path, batch_size, is_slowfast=False):
 
     # 1 - istanzio la classe dataset di train, val e test
-    classification_dataset_train = ClassificationDataset(df_dataset=df_dataset_train,
-                                                         data_cfg=data_cfg,
-                                                         dataset_path=dataset_path,
-                                                         is_train=True,
-                                                         is_slowfast=is_slowfast)
-    classification_dataset_val = ClassificationDataset(df_dataset=df_dataset_val,
-                                                       data_cfg=data_cfg,
-                                                       dataset_path=dataset_path,
-                                                       is_slowfast=is_slowfast)
+    classification_dataset_train = Dataset(df_dataset=df_dataset_train,
+                                           data_cfg=data_cfg,
+                                           dataset_path=dataset_path,
+                                           is_train=True,
+                                           is_slowfast=is_slowfast)
+    classification_dataset_val = Dataset(df_dataset=df_dataset_val,
+                                         data_cfg=data_cfg,
+                                         dataset_path=dataset_path,
+                                         is_slowfast=is_slowfast)
     classification_dataset_test = None
     if df_dataset_test is not None:
-        classification_dataset_test = ClassificationDataset(df_dataset=df_dataset_test,
-                                                            data_cfg=data_cfg,
-                                                            dataset_path=dataset_path,
-                                                            is_slowfast=is_slowfast)
+        classification_dataset_test = Dataset(df_dataset=df_dataset_test,
+                                              data_cfg=data_cfg,
+                                              dataset_path=dataset_path,
+                                              is_slowfast=is_slowfast)
 
     classification_dataset_anomaly = None
     if df_dataset_test is not None:
-        classification_dataset_anomaly = ClassificationDataset(df_dataset=df_dataset_anomaly,
-                                                               data_cfg=data_cfg,
-                                                               dataset_path=dataset_path,
-                                                               is_slowfast=is_slowfast)
+        classification_dataset_anomaly = Dataset(df_dataset=df_dataset_anomaly,
+                                                 data_cfg=data_cfg,
+                                                 dataset_path=dataset_path,
+                                                 is_slowfast=is_slowfast)
 
 
     # 2 - istanzio i dataloader

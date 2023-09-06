@@ -6,6 +6,7 @@ import torch.nn as nn
 from pytorchvideo.data.encoded_video import EncodedVideo
 import numpy as np
 import pandas as pd
+import gc
 
 from pytorchvideo.transforms import (
     ApplyTransformToKey,
@@ -19,7 +20,7 @@ from torchvision.transforms import (
     Resize
 )
 
-from model import TimeAutoencoder, find_last_checkpoint_file
+from model import SpaceTimeAutoencoder, find_last_checkpoint_file
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("device: ", device)
@@ -249,7 +250,7 @@ if __name__ == '__main__':
         )
 
     # 2 - load model
-    model = TimeAutoencoder(model_cfg)
+    model = SpaceTimeAutoencoder(model_cfg)
     print("Upload the best checkpoint at the path: ", path_checkpoint)
     checkpoint = torch.load(path_checkpoint, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model'])
@@ -281,6 +282,9 @@ if __name__ == '__main__':
                                                                  file_result=file,
                                                                  invert_accuracy=True,
                                                                  is_slowfast=is_slowfast)
+        torch.cuda.empty_cache()
+        gc.collect()
+
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         file.write("NON ANOMALY ACCURACY - VAL SET\n")
@@ -296,6 +300,9 @@ if __name__ == '__main__':
                                                file_result=file,
                                                invert_accuracy=True,
                                                is_slowfast=is_slowfast)
+        torch.cuda.empty_cache()
+        gc.collect()
+
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         file.write("NON ANOMALY ACCURACY - TEST SET\n")
@@ -311,6 +318,9 @@ if __name__ == '__main__':
                                                file_result=file,
                                                invert_accuracy=True,
                                                is_slowfast=is_slowfast)
+        torch.cuda.empty_cache()
+        gc.collect()
+
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         file.write("ANOMALY ACCURACY\n")
@@ -325,5 +335,7 @@ if __name__ == '__main__':
                                                file_result=file,
                                                embedding_centroids=embedding_centroids,
                                                is_slowfast=is_slowfast)
+        torch.cuda.empty_cache()
+        gc.collect()
 
         file.close()

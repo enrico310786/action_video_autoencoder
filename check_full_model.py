@@ -6,7 +6,7 @@ import torch
 
 from prettytable import PrettyTable
 from transformers import AutoImageProcessor
-from model import TimeAutoencoder
+from model import SpaceTimeAutoencoder
 import torch.nn as nn
 
 
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     model_cfg = cfg['model']
 
     # 3 - load model
-    model = TimeAutoencoder(model_cfg)
+    model = SpaceTimeAutoencoder(model_cfg)
     model.to(device)
 
     print("**********************************************")

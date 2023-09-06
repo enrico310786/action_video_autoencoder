@@ -15,7 +15,7 @@ import wandb
 import seaborn as sns
 import gc
 
-from model import TimeAutoencoder, find_last_checkpoint_file
+from model import SpaceTimeAutoencoder, find_last_checkpoint_file
 
 
 def train_batch(inputs, model, optimizer, criterion):
@@ -610,7 +610,7 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
     # create the model
     print("*****************************************")
     print("create the model")
-    model = TimeAutoencoder(cfg["model"]).to(device)
+    model = SpaceTimeAutoencoder(cfg["model"]).to(device)
     print("Check layers properties")
     for i, properties in enumerate(model.named_parameters()):
         print("Model layer: {} -  name: {} - requires_grad: {} ".format(i, properties[0],
@@ -735,7 +735,8 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                                                                 path_save=checkpoint_dir,
                                                                                                                 embedding_centroids=None,
                                                                                                                 latent_centroids=None)
-
+        torch.cuda.empty_cache()
+        gc.collect()
         print("-------------------------------------------------------------------")
         print("-------------------------------------------------------------------")
 
@@ -751,7 +752,8 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                    path_save=checkpoint_dir,
                                                                    embedding_centroids=train_embedding_centroids,
                                                                    latent_centroids=train_latent_centroids)
-
+        torch.cuda.empty_cache()
+        gc.collect()
         if test_loader is not None:
             print("-------------------------------------------------------------------")
             print("-------------------------------------------------------------------")
@@ -768,7 +770,8 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                        path_save=checkpoint_dir,
                                                                        embedding_centroids=train_embedding_centroids,
                                                                        latent_centroids=train_latent_centroids)
-
+            torch.cuda.empty_cache()
+            gc.collect()
         if anomaly_loader is not None:
             print("-------------------------------------------------------------------")
             print("-------------------------------------------------------------------")
@@ -786,6 +789,8 @@ def run_train_test_model(cfg, do_train, do_test, aws_bucket=None, aws_directory=
                                                                                              embedding_centroids=train_embedding_centroids,
                                                                                              latent_centroids=train_latent_centroids,
                                                                                              df_anomaly_distances=df_anomaly_distances)
+            torch.cuda.empty_cache()
+            gc.collect()
         print("-------------------------------------------------------------------")
         print("-------------------------------------------------------------------")
         analyze_error_distribution(df_distribution, checkpoint_dir)
