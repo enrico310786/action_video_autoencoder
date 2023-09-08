@@ -21,14 +21,6 @@ from model import SpaceTimeAutoencoder, find_last_checkpoint_file
 def train_batch(inputs, model, optimizer, criterion):
     model.train()
     target, outputs, latent = model(inputs)
-    #target = model.base_model(inputs)
-    #print("target.size(): ", target.size())
-    #print("outputs.size(): ", outputs.size())
-    #outputs = model(inputs)
-    #print("target.size(): ", target.size())
-    #print("outputs.size(): ", outputs.size())
-    #print("type(target): ", type(target))
-    #print("type(outputs): ", type(outputs))
     loss = criterion(outputs, target)
     loss.backward()
     optimizer.step()
@@ -40,8 +32,6 @@ def train_batch(inputs, model, optimizer, criterion):
 def val_loss(inputs, model, criterion):
     model.eval()
     target, outputs, latent = model(inputs)
-    #target = model.base_model(inputs)
-    #outputs = model(inputs)
     val_loss = criterion(outputs, target)
     return val_loss.item()
 
@@ -199,31 +189,6 @@ def calculate_errors_and_distributions(device,
             plt.scatter(*zip(*clustered), c=class_labels, cmap=cmap)
             plt.colorbar(drawedges=True)
             fig.savefig(os.path.join(path_save, "TSNE_embedding_array_train.png"))
-
-            '''
-            f = open(os.path.join(path_save, "train_ambedding_latent_centroids.txt"), 'w')
-            f.write('Latent centroids')
-            f.write('\n\n')
-            f.write('latent_centroid_0: {}\n\n'.format(latent_centroids[0]))
-            f.write('latent_centroid_1: {}\n\n'.format(latent_centroids[1]))
-            f.write('latent_centroid_2: {}\n\n'.format(latent_centroids[2]))
-            f.write('latent_centroid_3: {}\n\n'.format(latent_centroids[3]))
-            f.write('latent_centroid_4: {}\n\n'.format(latent_centroids[4]))
-            f.write('latent_centroid_5: {}\n\n'.format(latent_centroids[5]))
-            f.write('latent_centroid_6: {}\n\n'.format(latent_centroids[6]))
-            f.write('\n\n')
-            f.write('Embedding centroids')
-            f.write('\n\n')
-            f.write('embedding_centroid_0: {}\n\n'.format(embedding_centroids[0]))
-            f.write('embedding_centroid_1: {}\n\n'.format(embedding_centroids[1]))
-            f.write('embedding_centroid_2: {}\n\n'.format(embedding_centroids[2]))
-            f.write('embedding_centroid_3: {}\n\n'.format(embedding_centroids[3]))
-            f.write('embedding_centroid_4: {}\n\n'.format(embedding_centroids[4]))
-            f.write('embedding_centroid_5: {}\n\n'.format(embedding_centroids[5]))
-            f.write('embedding_centroid_6: {}\n\n'.format(embedding_centroids[6]))
-
-            f.close()
-            '''
 
         return df_distribution, latent_centroids, embedding_centroids, df_anomaly_distances
 

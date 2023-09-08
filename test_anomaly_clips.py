@@ -5,7 +5,6 @@ import argparse
 import torch.nn as nn
 from pytorchvideo.data.encoded_video import EncodedVideo
 import numpy as np
-import pandas as pd
 import gc
 
 from pytorchvideo.transforms import (
@@ -76,7 +75,7 @@ def load_video(video_path, permute_color_frame, transform):
     return video_tensor
 
 
-def evaluate_anomaly_accuracy_v2(model, transform, path_datset, thershold_err, thershold_dist, file_result, embedding_centroids=None, invert_accuracy=False, is_slowfast=False):
+def evaluate_anomaly_accuracy(model, transform, path_datset, thershold_err, thershold_dist, file_result, embedding_centroids=None, invert_accuracy=False, is_slowfast=False):
 
     # 4 iter over the anomaly clips
     counter_anomaly_error = 0
@@ -130,9 +129,6 @@ def evaluate_anomaly_accuracy_v2(model, transform, path_datset, thershold_err, t
 
                     # reconstructed embedding
                     emb, rec_emb, _ = model(tensor_video)
-                    #rec_emb = model(tensor_video)
-                    # embedding
-                    #emb = model.base_model(tensor_video)
                     error = loss(emb, rec_emb).item()
 
                     # chech the reconstructing error
@@ -274,14 +270,14 @@ if __name__ == '__main__':
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_train_dir = os.path.join(path_dataset, 'train')
-        embedding_centroids, file = evaluate_anomaly_accuracy_v2(model=model,
-                                                                 transform=transform,
-                                                                 path_datset=path_train_dir,
-                                                                 thershold_err=thershold_error,
-                                                                 thershold_dist=thershold_dist,
-                                                                 file_result=file,
-                                                                 invert_accuracy=True,
-                                                                 is_slowfast=is_slowfast)
+        embedding_centroids, file = evaluate_anomaly_accuracy(model=model,
+                                                              transform=transform,
+                                                              path_datset=path_train_dir,
+                                                              thershold_err=thershold_error,
+                                                              thershold_dist=thershold_dist,
+                                                              file_result=file,
+                                                              invert_accuracy=True,
+                                                              is_slowfast=is_slowfast)
         torch.cuda.empty_cache()
         gc.collect()
 
@@ -291,15 +287,15 @@ if __name__ == '__main__':
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_val_dir = os.path.join(path_dataset, 'val')
-        _, file = evaluate_anomaly_accuracy_v2(model=model,
-                                               transform=transform,
-                                               path_datset=path_val_dir,
-                                               thershold_err=thershold_error,
-                                               thershold_dist=thershold_dist,
-                                               embedding_centroids=embedding_centroids,
-                                               file_result=file,
-                                               invert_accuracy=True,
-                                               is_slowfast=is_slowfast)
+        _, file = evaluate_anomaly_accuracy(model=model,
+                                            transform=transform,
+                                            path_datset=path_val_dir,
+                                            thershold_err=thershold_error,
+                                            thershold_dist=thershold_dist,
+                                            embedding_centroids=embedding_centroids,
+                                            file_result=file,
+                                            invert_accuracy=True,
+                                            is_slowfast=is_slowfast)
         torch.cuda.empty_cache()
         gc.collect()
 
@@ -309,15 +305,15 @@ if __name__ == '__main__':
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_test_dir = os.path.join(path_dataset, 'test')
-        _, file = evaluate_anomaly_accuracy_v2(model=model,
-                                               transform=transform,
-                                               path_datset=path_test_dir,
-                                               thershold_err=thershold_error,
-                                               thershold_dist=thershold_dist,
-                                               embedding_centroids=embedding_centroids,
-                                               file_result=file,
-                                               invert_accuracy=True,
-                                               is_slowfast=is_slowfast)
+        _, file = evaluate_anomaly_accuracy(model=model,
+                                            transform=transform,
+                                            path_datset=path_test_dir,
+                                            thershold_err=thershold_error,
+                                            thershold_dist=thershold_dist,
+                                            embedding_centroids=embedding_centroids,
+                                            file_result=file,
+                                            invert_accuracy=True,
+                                            is_slowfast=is_slowfast)
         torch.cuda.empty_cache()
         gc.collect()
 
@@ -327,14 +323,14 @@ if __name__ == '__main__':
         file.write("------------------------------------------------\n")
         file.write("------------------------------------------------\n")
         path_anomaly_dir = os.path.join(path_dataset, 'anomaly')
-        _, file = evaluate_anomaly_accuracy_v2(model=model,
-                                               transform=transform,
-                                               path_datset=path_anomaly_dir,
-                                               thershold_err=thershold_error,
-                                               thershold_dist=thershold_dist,
-                                               file_result=file,
-                                               embedding_centroids=embedding_centroids,
-                                               is_slowfast=is_slowfast)
+        _, file = evaluate_anomaly_accuracy(model=model,
+                                            transform=transform,
+                                            path_datset=path_anomaly_dir,
+                                            thershold_err=thershold_error,
+                                            thershold_dist=thershold_dist,
+                                            file_result=file,
+                                            embedding_centroids=embedding_centroids,
+                                            is_slowfast=is_slowfast)
         torch.cuda.empty_cache()
         gc.collect()
 
