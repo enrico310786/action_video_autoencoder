@@ -3,7 +3,7 @@
 In this project I show how to solve a video anomaly detection task using a pretrained space-time model 
 with on top a traditional autoencoder.
 
-You can read more about the project following the Medium post at:
+You can read more about the project following the Medium post at this [link](https://medium.com/@enrico.randellini/video-anomaly-detection-with-pretrained-space-time-models-d2ab529c5a26)
 
 In order to define a set of non anomalus clip video and another set of anomalous clips,
 I will consider the UCF Sports Action Dataset. It contains
