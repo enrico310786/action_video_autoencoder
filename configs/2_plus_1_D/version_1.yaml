@@ -6,8 +6,8 @@ dataset:
   path_dataset_anomaly_csv: dataset/ucf_action_grouped_augmented_ttv_mp4/df_anomaly.csv
   batch_size: 8
 model:
-  name_time_model: r2plus1d_18 # timesformer - r2plus1d_18 - r3d
-  init_dim: 512 # 768 for timesformer - 512 for r2plus1d_18 - 2048 for r3d
+  name_time_model: r2plus1d_18 # timesformer - r2plus1d_18 - r3d - 3d_slowfast
+  init_dim: 512 # 768 for timesformer - 512 for r2plus1d_18 - 2048 for r3d - 3d_slowfast
   num_autoencoder_layers: 3 # 2 or 3
   dim_autoencoder_layers: 384,256,128 #512,256,128
   freeze_layers: 1
@@ -31,4 +31,4 @@ data:
   min_size: 128
   max_size: 171
   resize_to: 112
-  permute_color_frame: 0 # 1 for timesformer - 0 for r2plus1d_18 - 0 for r3d
+  permute_color_frame: 0 # 1 for timesformer - 0 for r2plus1d_18 - 0 for r3d - 0 for 3d_slowfast

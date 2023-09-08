@@ -31,4 +31,4 @@ data:
   min_size: 128
   max_size: 171
   resize_to: 112
-  permute_color_frame: 0 # 1 for timesformer - 0 for r2plus1d_18 - 0 for r3d
+  permute_color_frame: 0 # 1 for timesformer - 0 for r2plus1d_18 - 0 for r3d - 0 for 3d_slowfast
